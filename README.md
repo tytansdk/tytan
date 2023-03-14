@@ -1,2 +1,9 @@
-# tytan
-Python SDK for large QUBO problems
+# TYTAN
+大規模QUBOアニーリングのためのSDK
+
+## 問題形式
+QUBO形式
+
+## 問題サイズ
+ローカル：1,000量子ビット程度
+API経由：1,000-10万量子ビット程度
