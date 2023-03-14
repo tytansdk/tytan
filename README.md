@@ -29,3 +29,9 @@ res = sampler.run(qubo, shots=100)
 # 結果を出力
 print(res)
 ```
+
+# コントリビューター
+https://github.com/tytansdk/tytan/graphs/contributors
+
+# 著作権
+Copyright 2023 TYTAN TEAM
