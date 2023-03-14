@@ -30,6 +30,9 @@ res = sampler.run(qubo, shots=100)
 print(res)
 ```
 
+# サンプラー
+SASampler()
+
 # コントリビューター
 https://github.com/tytansdk/tytan/graphs/contributors
 
