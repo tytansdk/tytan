@@ -10,6 +10,10 @@ API経由：1,000-10万量子ビット程度
 
 ## インストール
 ```
+pip install tytan
+```
+
+```
 pip install git+https://github.com/tytansdk/tytan
 ```
 
