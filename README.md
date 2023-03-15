@@ -18,6 +18,15 @@ pip install git+https://github.com/tytansdk/tytan
 ```
 
 ## 計算
+
+### 事前準備
+
+```
+# 以下のコード例ではsympyが必要
+pip install sympy
+```
+
+### コード例
 ```
 from tytan import *
 import sympy as sym
@@ -39,6 +48,7 @@ result = sampler.run(qubo, shots=100)
 print(result)
 ```
 
+### 出力例
 ```
 [[{'z': 0, 'y': 0, 'x': 0}, 0.0, 8], [{'z': 1, 'y': 0, 'x': 0}, 1.0, 15], [{'z': 0, 'y': 0, 'x': 1}, 3.0, 12], [{'z': 0, 'y': 1, 'x': 0}, 4.0, 11], [{'z': 1, 'y': 0, 'x': 1}, 6.0, 17], [{'z': 1, 'y': 1, 'x': 0}, 7.0, 12], [{'z': 0, 'y': 1, 'x': 1}, 9.0, 16], [{'z': 1, 'y': 1, 'x': 1}, 14.0, 9]]
 ```
