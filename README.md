@@ -58,6 +58,3 @@ SASampler()
 
 # コントリビューター
 https://github.com/tytansdk/tytan/graphs/contributors
-
-# 著作権
-Copyright 2023 TYTAN TEAM
