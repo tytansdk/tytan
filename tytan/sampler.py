@@ -67,6 +67,6 @@ class SASampler:
         counts = grouped.size().reset_index(name='occerence')
         counts = counts.sort_values('energy').reset_index(drop=True)
         dict_data = counts.iloc[:,0:-2].to_dict(orient="records")
-        result_dict = [[dict_data[index], row['energy'], row['occerence']] for index,row in counts.iterrows()]
+        result_dict = [[dict_data[index], row['energy'], int(row['occerence'])] for index,row in counts.iterrows()]
  
         return result_dict
