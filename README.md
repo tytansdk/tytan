@@ -44,13 +44,13 @@ x, y, z = sym.symbols('x y z')
 expr = 3*x**2 + 2*x*y + 4*y**2 + z**2 + 2*x*z + 2*y*z
 
 # Compileクラスを使用して、QUBOを取得
-qubo = qubo.Compile(expr).get_qubo()
+Q, offset = qubo.Compile(expr).get_qubo()
 
 # サンプラーを選択
 solver = sampler.SASampler()
 
 # 計算
-result = solver.run(qubo, shots=100)
+result = solver.run(Q, shots=100)
 print(result)
 ```
 
