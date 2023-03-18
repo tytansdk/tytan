@@ -1,8 +1,14 @@
+import sympy as sp
+
 class Compile:
     def __init__(self, expr):
         self.expr = expr
     
     def get_qubo(self):
+        
+        #展開されていない式は展開する
+        self.expr = sp.expand(self.expr)
+        
         # 式で使用されている変数を確認
         for item in self.expr.free_symbols:
             # バイナリなので、二次の項を一次の項に減らす代入
