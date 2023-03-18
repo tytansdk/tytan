@@ -15,7 +15,14 @@ class Compile:
             self.expr = self.expr.subs([(item**2, item)])
 
         # 係数を抜き出す
-        coeff_dict = dict(self.expr.as_coefficients_dict())
+        coeff_dict = self.expr.as_coefficients_dict()
+        offset = coeff_dict.get(1, 0)
+        
+        #print(offset)
+        
+        expr2 = self.expr - offset
+        
+        coeff_dict = dict(expr2.as_coefficients_dict())
 
         # QUBOに格納開始
         qubo = {}
@@ -31,4 +38,4 @@ class Compile:
                     arr.append(term)
                 qubo[(str(arr[0]), str(arr[1]))] = value
 
-        return qubo
+        return qubo, offset
