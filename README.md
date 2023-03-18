@@ -47,10 +47,10 @@ expr = 3*x**2 + 2*x*y + 4*y**2 + z**2 + 2*x*z + 2*y*z
 qubo = qubo.Compile(expr).get_qubo()
 
 # サンプラーを選択
-sampler = sampler.SASampler()
+solver = sampler.SASampler()
 
 # 計算
-result = sampler.run(qubo, shots=100)
+result = solver.run(qubo, shots=100)
 print(result)
 ```
 
@@ -64,7 +64,15 @@ print(result)
 # サンプラー
 サンプラーと呼ばれる計算をしてくれるプログラムが搭載されています。TYTANでは基本的には簡単なソルバーを用意はしていますが、ユーザーごとにソルバーを用意して簡単に繋げられるようにしています。ローカルのサンプラーのように手元のマシンにプログラムとして搭載する以外にも、APIのサンプラーでサーバーに接続する専用サンプラーなど様々な形態に対応できます。
 
+ローカルサンプラー：
+```
 SASampler()
+```
+
+商用クラウドサンプラー：
+```
+ZekeSampler()
+```
 
 # 商用利用
 TYTANは商用利用前提ですので、個人での利用はもちろん企業での活用を許可し、促進しています。
