@@ -71,6 +71,130 @@ class SASampler:
  
         return result_dict
 
+class GASampler:
+    def __init__(self):
+        self.max_gen = 1000000
+        self.max_count = 2
+    
+    def run(self, qubo, shots):
+        #重複なしに要素を抽出
+        keys = list(set(k for tup in qubo.keys() for k in tup))
+
+        #要素のソート
+        keys.sort()
+
+        #抽出した要素のindexマップを作成
+        index_map = {k: v for v, k in enumerate(keys)}
+
+        #上記のindexマップを利用してタプルの内容をindexで書き換え
+        qubo_index = {(index_map[k[0]], index_map[k[1]]): v for k, v in qubo.items()}
+
+        #タプル内をソート
+        qubo_sorted = {tuple(sorted(k)): v for k, v in sorted(qubo_index.items(), key=lambda x: x[1])}
+
+        #量子ビット数
+        N = int(len(keys))
+
+        #QUBO matrix 初期化
+        qmatrix = np.zeros((N, N))
+        for (i, j), value in qubo_sorted.items():
+            qmatrix[i, j] = value
+
+        #df初期化
+        columns = keys.copy()
+        columns.append("energy")
+        df = pd.DataFrame(columns=columns)
+
+        #--- GA ---
+        #プール初期化
+        pool_num = max(shots, 2) #N * 10
+        pool = np.random.randint(0, 2, (pool_num, N))
+        #スコア初期化
+        score = np.array([q@qmatrix@q for q in pool])
+
+        #進化
+        last_mean_score = 99999
+        best_score = np.copy(score)
+        count = 0
+        sw = True
+        
+        for gen in range(1, self.max_gen + 1):
+            #親
+            parent_id = np.random.choice(range(pool_num), 2, replace=False)
+            parent = pool[parent_id]
+
+            if N > 2:
+                #交叉点
+                cross_point = np.sort(np.random.choice(range(1, N), 2, replace=False))
+                #家族
+                c = np.array([parent[0],
+                              parent[1],
+                              np.hstack((parent[0, :cross_point[0]], parent[0, cross_point[0]:cross_point[1]], parent[1, cross_point[1]:])),
+                              np.hstack((parent[0, :cross_point[0]], parent[1, cross_point[0]:cross_point[1]], parent[0, cross_point[1]:])),
+                              np.hstack((parent[0, :cross_point[0]], parent[1, cross_point[0]:cross_point[1]], parent[1, cross_point[1]:])),
+                              np.hstack((parent[1, :cross_point[0]], parent[0, cross_point[0]:cross_point[1]], parent[0, cross_point[1]:])),
+                              np.hstack((parent[1, :cross_point[0]], parent[0, cross_point[0]:cross_point[1]], parent[1, cross_point[1]:])),
+                              np.hstack((parent[1, :cross_point[0]], parent[1, cross_point[0]:cross_point[1]], parent[0, cross_point[1]:]))])
+                #評価
+                s = np.array([c[0]@qmatrix@c[0], c[1]@qmatrix@c[1], c[2]@qmatrix@c[2], c[3]@qmatrix@c[3], c[4]@qmatrix@c[4], c[5]@qmatrix@c[5]])
+            
+            elif N == 2:
+                #家族
+                c = np.array([parent[0],
+                              parent[1],
+                              [parent[0, 0], parent[1, 1]],
+                              [parent[0, 1], parent[1, 0]]])
+                #評価
+                s = np.array([c[0]@qmatrix@c[0], c[1]@qmatrix@c[1], c[2]@qmatrix@c[2], c[3]@qmatrix@c[3]])
+            
+            elif N == 1:
+                #家族
+                c = np.array([parent[0],
+                              parent[1],
+                              1 - parent[0],
+                              1 - parent[1]])
+                #評価
+                s = np.array([c[0]@qmatrix@c[0], c[1]@qmatrix@c[1], c[2]@qmatrix@c[2], c[3]@qmatrix@c[3]])
+
+            #エリート選択
+            select_id = np.argsort(s)[:2]
+            #交代
+            pool[parent_id] = c[select_id]
+            score[parent_id] = s[select_id]
+            #進行表示1
+            if gen % 500 == 0:
+                print('-', end='')
+                sw = False
+                if gen % 10000 == 0:
+                    print(' {}/{}'.format(gen, self.max_gen))
+                    sw = True
+            #終了判定
+            if gen % 10 == 0:
+                if np.sum(score - best_score) == 0:
+                    count += 1
+                else:
+                    best_score = np.copy(score)
+                    count = 0
+                if count >= self.max_count:
+                    break
+        #進行表示2
+        if not sw: print()
+        print('Automatic end at gen {}/{}'.format(gen, self.max_gen))
+
+        #後処理1
+        expand = np.hstack((pool, score.reshape(pool_num, 1)))
+        df = pd.DataFrame(expand, columns=df.columns)
+        #----------
+
+        #後処理2
+        grouped = df.groupby(list(df.columns))
+        counts = grouped.size().reset_index(name='occerrence')
+        counts = counts.sort_values('energy').reset_index(drop=True)
+        dict_data = counts.iloc[:,0:-2].to_dict(orient="records")
+        result_dict = [[dict_data[index], row['energy'], int(row['occerrence'])] for index,row in counts.iterrows()]
+ 
+        return result_dict
+
 class ZekeSampler:
 
     def __init__(self):
