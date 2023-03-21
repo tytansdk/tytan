@@ -19,6 +19,9 @@ class SASampler:
         keys = list(set(k for tup in qubo.keys() for k in tup))
         #print(keys)
 
+        #要素のソート
+        keys.sort()
+        
         #抽出した要素のindexマップを作成
         index_map = {k: v for v, k in enumerate(keys)}
         #print(index_map)
@@ -112,6 +115,9 @@ class ZekeSampler:
         keys = list(set(k for tup in qubo.keys() for k in tup))
         #print(keys)
 
+        #要素のソート
+        keys.sort()
+        
         #抽出した要素のindexマップを作成
         index_map = {k: v for v, k in enumerate(keys)}
         #print(index_map)
@@ -236,6 +242,9 @@ class NQSSampler():
         keys = list(set(k for tup in qubo.keys() for k in tup))
         #print(keys)
 
+        #要素のソート
+        keys.sort()
+        
         #抽出した要素のindexマップを作成
         index_map = {k: v for v, k in enumerate(keys)}
         #print(index_map)
