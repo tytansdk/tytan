@@ -66,14 +66,14 @@ print(result)
 
 ローカルサンプラー：
 ```
-SASampler()
-GASampler:
+SASampler
+GASampler
 ```
 
 商用クラウドサンプラー：
 ```
-ZekeSampler()
-NQSSampler()　準備中
+ZekeSampler
+NQSSampler　準備中
 ```
 
 # 商用利用
