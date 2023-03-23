@@ -208,7 +208,7 @@ class ZekeSampler:
     def post_request(self, path, body, api_key):
         import gzip
         import json
-        import urllib
+        import urllib.request
         
         headers = {
             "Content-Type": "application/json",
