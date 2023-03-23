@@ -335,24 +335,24 @@ class ZekeSampler:
         
         return result_list
     
-class NQSSampler():
-    
+class NQSSampler:
+
     from typing import Optional
-    
-    def __init__(self):
-        self.API_ENDPOINT = "coming soon"
-        self.HEADERS = {"user-agent": "blueqat"}
+
+    def __init__(self, api_key: Optional[str] = None):
+        self.API_ENDPOINT = "https://tytan-api.blueqat.com/v1/"
+        self.__api_key = api_key
         return
-    
-    def to_zip(self, qubo: str, filename: str):
-        import zipfile
-        
-        z_file = zipfile.ZipFile("/tmp/{}".format(filename), "w")
-        z_file.writestr("qubo_w.csv", qubo, zipfile.ZIP_DEFLATED)
-        z_file.close()
-        
-    def run(self, qubo, time_limit_sec: Optional[int] = 30, iter: Optional[int] = 10000, population: Optional[int] = 500,):
-        
+
+    def run(
+        self,
+        qubo: dict,
+        time_limit_sec: Optional[int] = 30,
+        iter: Optional[int] = 10000,
+        population: Optional[int] = 500,
+        api_key: Optional[str] = None,
+    ):
+
         import ulid
         import httpx
         import json
@@ -360,36 +360,39 @@ class NQSSampler():
         import csv
         import io
 
-        #重複なしに要素を抽出
+        # 重複なしに要素を抽出
         keys = list(set(k for tup in qubo.keys() for k in tup))
-        #print(keys)
+        # print(keys)
 
-        #抽出した要素のindexマップを作成
+        # 抽出した要素のindexマップを作成
         index_map = {k: v for v, k in enumerate(keys)}
-        #print(index_map)
+        # print(index_map)
 
-        #上記のindexマップを利用してタプルの内容をindexで書き換え
+        # 上記のindexマップを利用してタプルの内容をindexで書き換え
         qubo_index = {(index_map[k[0]], index_map[k[1]]): v for k, v in qubo.items()}
-        #print(qubo_index)
+        # print(qubo_index)
 
-        #タプル内をソート
-        qubo_sorted = {tuple(sorted(k)): v for k, v in sorted(qubo_index.items(), key=lambda x: x[1])}
-        #print(qubo_sorted)
+        # タプル内をソート
+        qubo_sorted = {
+            tuple(sorted(k)): v
+            for k, v in sorted(qubo_index.items(), key=lambda x: x[1])
+        }
+        # print(qubo_sorted)
 
-        #量子ビット数
+        # 量子ビット数
         N = int(len(keys))
 
-        #QUBO matrix 初期化
+        # QUBO matrix 初期化
         qmatrix = np.zeros((N, N), dtype=object)
 
         for (i, j), value in qubo_sorted.items():
             qmatrix[i, j] = value
-        
+
         qmatrix = np.insert(qmatrix, 0, keys, axis=1)
         qmatrix = np.vstack([[""] + keys[:], qmatrix])
-        
-        #print(qmatrix)
-        
+
+        # print(qmatrix)
+
         # StringIOオブジェクトを作成する
         csv_buffer = io.StringIO()
 
@@ -403,7 +406,7 @@ class NQSSampler():
 
         id = ulid.new()
         filename = "{}.zip".format(id.str)
-        self.to_zip(qubo=Q, filename=filename)
+        self.__to_zip(qubo=Q, filename=filename)
         files = {
             "zipfile": (
                 filename,
@@ -411,18 +414,39 @@ class NQSSampler():
                 "data:application/octet-stream",
             )
         }
+        key = self.__api_key if api_key is None else api_key
         r = httpx.post(
-            "{}/solve".format(self.API_ENDPOINT),
+            "{}/tasks/nqs".format(self.API_ENDPOINT),
             files=files,
             data={
                 "population": population,
                 "timeLimitSec": time_limit_sec,
                 "iter": iter,
             },
-            headers=self.HEADERS,
+            headers=self.__get_headers(key),
             timeout=None,
         )
         os.remove("/tmp/{}".format(filename))
-             
+
         result = json.loads(r.text)
         return result
+
+    def __to_zip(self, qubo: str, filename: str):
+        import zipfile
+
+        z_file = zipfile.ZipFile("/tmp/{}".format(filename), "w")
+        z_file.writestr("qubo_w.csv", qubo, zipfile.ZIP_DEFLATED)
+        z_file.close()
+
+
+    def __get_headers(self, api_key: Optional[str]) -> dict[str, str]:
+        assert api_key is not None, (
+            "Please specify your api_key. "
+            "You can get it at the following URL. "
+            "https://blueqat.com/accounts/settings"
+        )
+        return {
+            "user-agent": "blueqat",
+            "X-Api-Key": api_key,
+            "accept-encoding": "gzip",
+        }
