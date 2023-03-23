@@ -73,7 +73,7 @@ GASampler
 商用クラウドサンプラー：
 ```
 ZekeSampler
-NQSSampler　準備中
+NQSSampler
 ```
 
 # 商用利用
