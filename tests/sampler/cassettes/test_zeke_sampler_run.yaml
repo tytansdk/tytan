@@ -1,0 +1,52 @@
+interactions:
+- request:
+    body: '{"bqm": {"type": "BinaryQuadraticModel", "version": {"bqm_schema": "3.0.0"},
+      "use_bytes": false, "index_type": "int32", "bias_type": "float64", "num_variables":
+      3, "num_interactions": 3, "variable_labels": ["z", "y", "x"], "variable_type":
+      "BINARY", "offset": 0.0, "info": {}, "linear_biases": [1.0, 4.0, 3.0], "quadratic_biases":
+      [2.0, 2.0, 2.0], "quadratic_head": [1, 0, 0], "quadratic_tail": [2, 2, 1]},
+      "shots": 1}'
+    headers:
+      Accept-Encoding:
+      - gzip
+      Connection:
+      - close
+      Content-Length:
+      - '418'
+      Content-Type:
+      - application/json
+      Host:
+      - tytan-api.blueqat.com
+      User-Agent:
+      - Python-urllib/3.9
+    method: POST
+    uri: https://tytan-api.blueqat.com/v1/tasks/create
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA42Sy07DMBBF/2XWaWXHidN0Bzs2LGCFqiqaOJMSkUflB1BQ/50xDQUhQGzieHLv
+        nDuOX6FrYA2FSKVCmS6wbcwiU1ItaqH4kWdmRZQWGltIwJILvYf1K3RjO8W1Jo+VxXFHsN6IpVhp
+        nSlVFrkuy1JJneTLQqhilWZFpnOdCrlNTiZn7qkJPVX+sGcz7GgayNvOwDGBuXaLw76nW/LMfiTj
+        J+silEayu0N8a9DjCbw9m9BaPLDB3WPcbyIx6j5AbT+h1xkrgqOqPnjipi32jhg8hqGajAnW0mjI
+        fWHI/xO68Zf+xziGdd00xsbufTpH/v0sBoaAWsqlgDmHnZ7YKZNZWJ2CnANtxPaPSMn3UIFTqfTn
+        qWfAZ/wVnCI8ou2w7qNWnWV7NA/Et8bbQDzQLPlwX15dX9zcwZcPPdbUc4cNPHM5pnyBLVPpmUzw
+        fBiV7wa28l8Uaa6zUhSi4DuUaVEmYCw1nXeVmUYXhsiVxzfuUiMHtgIAAA==
+    headers:
+      Connection:
+      - close
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 24 Mar 2023 03:08:19 GMT
+      Server:
+      - nginx
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Accept-Encoding
+    status:
+      code: 200
+      message: OK
+version: 1
