@@ -3,70 +3,142 @@ import pandas as pd
 
 class SASampler:
     def __init__(self):
-        #: Initial Temperature
-        self.Ts = 5
-        #: Final Temperature
-        self.Tf = 0.02
-
-        #: Descreasing rate of temperature
-        self.R = 0.9
-        #: Iterations
-        self.ite = 100
-
+        #アニーリングステップ数（後ろに局所探索が入ることに注意）
+        #flip_count=1000, N=50, shots=100 -> 約１秒
+        self.flip_step = 1000
+    
     def run(self, qubo, shots):
+        
+        #start = time.time()
         
         #重複なしに要素を抽出
         keys = list(set(k for tup in qubo.keys() for k in tup))
-        #print(keys)
 
         #要素のソート
         keys.sort()
-        #print(keys)
-        
+
         #抽出した要素のindexマップを作成
         index_map = {k: v for v, k in enumerate(keys)}
-        #print(index_map)
 
         #上記のindexマップを利用してタプルの内容をindexで書き換え
         qubo_index = {(index_map[k[0]], index_map[k[1]]): v for k, v in qubo.items()}
-        #print(qubo_index)
 
         #タプル内をソート
         qubo_sorted = {tuple(sorted(k)): v for k, v in sorted(qubo_index.items(), key=lambda x: x[1])}
-        #print(qubo_sorted)
 
         #量子ビット数
         N = int(len(keys))
 
         #QUBO matrix 初期化
         qmatrix = np.zeros((N, N))
-
         for (i, j), value in qubo_sorted.items():
             qmatrix[i, j] = value
-        #print(qmatrix)
 
+        #df初期化
         columns = keys.copy()
         columns.append("energy")
         df = pd.DataFrame(columns=columns)
+
         
-        for i in range(shots):
-            T = self.Ts
-            q = np.random.choice([0,1], N)
-            while T > self.Tf:
-                x_list = np.random.randint(0, N, self.ite)
-                for x in x_list:
-                    q_copy = np.ones(N)*q[x]
-                    q_copy[x] = 1-q_copy[x]
-                    dE = -2*sum(q*q_copy*qmatrix[:,x])
+        
+        #--- 高速疑似SA ---
+        #プール初期化
+        pool_num = shots
+        pool = np.random.randint(0, 2, (pool_num, N))
+        #重複は振り直し
+        #パリエーションに余裕あれば確定非重複
+        if pool_num < 2**(N - 1):
+            #print('remake 1')
+            for i in range(pool_num - 1):
+                for j in range(i + 1, pool_num):
+                    while (pool[i] == pool[j]).all():
+                        pool[j] = np.random.randint(0, 2, N)
+        else:
+            #パリエーションに余裕なければ3トライ重複可
+            #print('remake 2')
+            for i in range(pool_num - 1):
+                for j in range(i + 1, pool_num):
+                    count = 0
+                    while (pool[i] == pool[j]).all():
+                        pool[j] = np.random.randint(0, 2, N)
+                        count += 1
+                        if count == 3:
+                            break
+        
+        #スコア初期化
+        score = np.array([q@qmatrix@q for q in pool])
+        
+        #フリップ数リスト（2個まで下がる）
+        flip = np.sort(np.random.rand(self.flip_step)**2)[::-1]
+        flip = (  flip * max(0, N*0.5 - 2)  ).astype(int) + 2
+        #print(flip)
+        
+        #フリップマスクリスト
+        flip_mask = [[1] * flip[0] + [0] * (N - flip[0])]
+        for i in range(1, self.flip_step):
+            tmp = [1] * flip[i] + [0] * (N - flip[i])
+            np.random.shuffle(tmp)
+            #前と重複なら振り直し
+            while tmp == flip_mask[-1]:
+                np.random.shuffle(tmp)
+            flip_mask.append(tmp)
+        flip_mask = np.array(flip_mask, bool)
+        #print(flip_mask.shape)
+        
+        #局所探索フリップマスクリスト
+        single_flip_mask = np.zeros((N, N), bool)
+        for i in range(N):
+            single_flip_mask[i, i] = True
+        #print(single_flip_mask.shape)
+        
+        #end = time.time()
+        #print('{}s'.format(round(end - start, 4)))
+        
+        #アニーリング
+        #集団まるごと温度を下げる
+        
+        #start = time.time()
+        
+        for fm in flip_mask:
+            #フリップ後
+            pool2 = np.where(fm, 1 - pool, pool)
+            score2 = np.array([q@qmatrix@q for q in pool2])
+            
+            #更新マスク
+            update_mask = score2 < score
+            
+            #更新
+            pool[update_mask] = pool2[update_mask]
+            score[update_mask] = score2[update_mask]
+        
+        #end = time.time()
+        #print('{}s'.format(round(end - start, 4)))
+        
+        #start = time.time()
+        
+        #最後に1フリップ局所探索
+        #集団まるごと
+        for fm in single_flip_mask:
+            #フリップ後
+            pool2 = np.where(fm, 1 - pool, pool)
+            score2 = np.array([q@qmatrix@q for q in pool2])
+            
+            #更新マスク
+            update_mask = score2 < score
+            
+            #更新
+            pool[update_mask] = pool2[update_mask]
+            score[update_mask] = score2[update_mask]
+        
+        #end = time.time()
+        #print('{}s'.format(round(end - start, 4)))
+        
+        #後処理1
+        expand = np.hstack((pool, score.reshape(pool_num, 1)))
+        df = pd.DataFrame(expand, columns=df.columns)
+        #----------
 
-                    if dE < 0 or np.exp(-dE/T) > np.random.random_sample():
-                        q[x] = 1 - q[x]
-                T *= self.R
-
-            new_row_df = pd.DataFrame([list(np.append(q, 0))], columns=df.columns)
-            new_row_df['energy'] = q@qmatrix@q
-            df = pd.concat([df, new_row_df], ignore_index=True)    
-    
+        #後処理2
         grouped = df.groupby(list(df.columns))
         counts = grouped.size().reset_index(name='occerrence')
         counts = counts.sort_values('energy').reset_index(drop=True)
