@@ -536,8 +536,7 @@ class NQSLocalSampler:
         qubo: dict,
         time_limit_sec: Optional[int] = 30,
         iter: Optional[int] = 10000,
-        population: Optional[int] = 500,
-        api_key: Optional[str] = None,
+        population: Optional[int] = 500
     ):
 
         import ulid
