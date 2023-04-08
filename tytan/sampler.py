@@ -522,3 +522,103 @@ class NQSSampler:
             "X-Api-Key": api_key,
             "accept-encoding": "gzip",
         }
+
+class NQSLocalSampler:
+
+    from typing import Optional
+    
+    def __init__(self, api_endpoint:str="http://localhost:8080/ngqs/v1/solve") -> None:
+        self.API_ENDPOINT = api_endpoint
+        return
+    
+    def run(
+        self,
+        qubo: dict,
+        time_limit_sec: Optional[int] = 30,
+        iter: Optional[int] = 10000,
+        population: Optional[int] = 500,
+        api_key: Optional[str] = None,
+    ):
+
+        import ulid
+        import httpx
+        import json
+        import os
+        import csv
+        import io
+
+        # 重複なしに要素を抽出
+        keys = list(set(k for tup in qubo.keys() for k in tup))
+        # print(keys)
+
+        # 抽出した要素のindexマップを作成
+        index_map = {k: v for v, k in enumerate(keys)}
+        # print(index_map)
+
+        # 上記のindexマップを利用してタプルの内容をindexで書き換え
+        qubo_index = {(index_map[k[0]], index_map[k[1]]): v for k, v in qubo.items()}
+        # print(qubo_index)
+
+        # タプル内をソート
+        qubo_sorted = {
+            tuple(sorted(k)): v
+            for k, v in sorted(qubo_index.items(), key=lambda x: x[1])
+        }
+        # print(qubo_sorted)
+
+        # 量子ビット数
+        N = int(len(keys))
+
+        # QUBO matrix 初期化
+        qmatrix = np.zeros((N, N), dtype=object)
+
+        for (i, j), value in qubo_sorted.items():
+            qmatrix[i, j] = value
+
+        qmatrix = np.insert(qmatrix, 0, keys, axis=1)
+        qmatrix = np.vstack([[""] + keys[:], qmatrix])
+
+        # print(qmatrix)
+
+        # StringIOオブジェクトを作成する
+        csv_buffer = io.StringIO()
+
+        # CSVファイルの文字列を書き込む
+        writer = csv.writer(csv_buffer)
+        for row in qmatrix:
+            writer.writerow(row)
+
+        # CSVファイルの文字列を取得する
+        Q = csv_buffer.getvalue()
+
+        id = ulid.new()
+        filename = "{}.zip".format(id.str)
+        self.__to_zip(qubo=Q, filename=filename)
+        files = {
+            "zipfile": (
+                filename,
+                open("/tmp/{}".format(filename), "rb"),
+                "data:application/octet-stream",
+            )
+        }
+        r = httpx.post(
+            self.API_ENDPOINT,
+            files=files,
+            data={
+                "population": population,
+                "timeLimitSec": time_limit_sec,
+                "iter": iter,
+            },
+            timeout=None,
+        )
+        os.remove("/tmp/{}".format(filename))
+
+        result = json.loads(r.text)
+        return result
+    
+    def __to_zip(self, qubo: str, filename: str):
+        import zipfile
+
+        z_file = zipfile.ZipFile("/tmp/{}".format(filename), "w")
+        z_file.writestr("qubo_w.csv", qubo, zipfile.ZIP_DEFLATED)
+        z_file.close()
