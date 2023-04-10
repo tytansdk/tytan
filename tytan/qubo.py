@@ -75,13 +75,17 @@ class Compile:
 
             # QUBOに格納開始
             qubo = {}
-            for i, r in self.expr.iterrows():
+            for i, r in enumerate(self.expr.values):
                 for j, c in enumerate(r):
                     if i <= j and c != 0:
+                        row_name, col_name = f'q{i}', f'q{j}'
+                        if self.expr.index.dtype == 'object':
+                            row_name = self.expr.index[i]
+
                         if self.expr.columns.dtype == 'object':
-                            qubo[(self.expr.columns[i], self.expr.columns[j])] = c
-                        else:
-                            qubo[(f'q{i}', f'q{j}')] = c
+                            col_name = self.expr.columns[j]
+
+                        qubo[(row_name, col_name)] = c
 
             return qubo, offset
 
