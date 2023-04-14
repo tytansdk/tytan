@@ -5,7 +5,7 @@
 QUBO形式
 
 ## 問題サイズ
-ローカル：1,000量子ビット程度   
+ローカル：1,000量子ビット程度
 API経由：1,000-10万量子ビット程度
 
 ## インストール
@@ -45,6 +45,45 @@ expr = 3*x**2 + 2*x*y + 4*y**2 + z**2 + 2*x*z + 2*y*z
 
 # Compileクラスを使用して、QUBOを取得
 Q, offset = qubo.Compile(expr).get_qubo()
+
+# サンプラーを選択
+solver = sampler.SASampler()
+
+# 計算
+result = solver.run(Q, shots=100)
+print(result)
+```
+
+numpyの場合
+```
+from tytan import *
+import numpy as np
+
+# QUBO行列を記述（上三角行列）
+matrix = np.array([[3, 2, 2], [0, 4, 2], [0, 0, 2]])
+
+# Compileクラスを使用して、QUBOを取得。
+Q, offset = qubo.Compile(matrix).get_qubo()
+
+# サンプラーを選択
+solver = sampler.SASampler()
+
+# 計算
+result = solver.run(Q, shots=100)
+print(result)
+```
+
+pandas（csv）の場合
+```
+from tytan import *
+import pandas as pd
+
+# QUBO行列を取得（csv, 上三角行列）
+# header, index名を設定した場合は変数名が設定した名前になる。
+csv_data = pd.read_csv('qubo.csv')
+
+# Compileクラスを使用して、QUBOを取得
+Q, offset = qubo.Compile(csv_data).get_qubo()
 
 # サンプラーを選択
 solver = sampler.SASampler()
