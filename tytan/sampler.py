@@ -412,7 +412,7 @@ class NQSSampler:
     from typing import Optional
 
     def __init__(self, api_key: Optional[str] = None):
-        self.API_ENDPOINT = "https://tytan-api.blueqat.com/v1/"
+        self.API_ENDPOINT = "https://tytan-api.blueqat.com/v1"
         self.__api_key = api_key
         return
 
