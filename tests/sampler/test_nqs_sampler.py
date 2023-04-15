@@ -5,8 +5,7 @@ import sympy as sym
 from tytan import qubo
 from tytan.sampler import NQSSampler
 
-@pytest.mark.vcr(filter_headers=["x-api-key"])
-def test_nqs_local_sampler_run():
+def test_nqs_sampler_run():
     x, y, z = sym.symbols("x y z")
     expr = 3 * x**2 + 2 * x * y + 4 * y**2 + z**2 + 2 * x * z + 2 * y * z
     Q, _offset = qubo.Compile(expr).get_qubo()
