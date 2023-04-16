@@ -21,9 +21,7 @@ class SASampler:
         index_map = {k: v for v, k in enumerate(keys)}
 
         # 上記のindexマップを利用してタプルの内容をindexで書き換え
-        qubo_index = {
-            (index_map[k[0]], index_map[k[1]]): v for k, v in qubo.items()
-        }
+        qubo_index = {(index_map[k[0]], index_map[k[1]]): v for k, v in qubo.items()}
 
         # タプル内をソート
         qubo_sorted = {
@@ -170,9 +168,7 @@ class GASampler:
         index_map = {k: v for v, k in enumerate(keys)}
 
         # 上記のindexマップを利用してタプルの内容をindexで書き換え
-        qubo_index = {
-            (index_map[k[0]], index_map[k[1]]): v for k, v in qubo.items()
-        }
+        qubo_index = {(index_map[k[0]], index_map[k[1]]): v for k, v in qubo.items()}
 
         # タプル内をソート
         qubo_sorted = {
@@ -213,9 +209,7 @@ class GASampler:
 
             if N > 2:
                 # 交叉点
-                cross_point = np.sort(
-                    np.random.choice(range(1, N), 2, replace=False)
-                )
+                cross_point = np.sort(np.random.choice(range(1, N), 2, replace=False))
                 # 家族
                 c = np.array(
                     [
@@ -299,9 +293,7 @@ class GASampler:
 
             elif N == 1:
                 # 家族
-                c = np.array(
-                    [parent[0], parent[1], 1 - parent[0], 1 - parent[1]]
-                )
+                c = np.array([parent[0], parent[1], 1 - parent[0], 1 - parent[1]])
                 # 評価
                 s = np.array(
                     [
@@ -400,9 +392,7 @@ class ZekeSampler:
         # print(index_map)
 
         # 上記のindexマップを利用してタプルの内容をindexで書き換え
-        qubo_index = {
-            (index_map[k[0]], index_map[k[1]]): v for k, v in qubo.items()
-        }
+        qubo_index = {(index_map[k[0]], index_map[k[1]]): v for k, v in qubo.items()}
         # print(qubo_index)
 
         # タプル内をソート
@@ -474,9 +464,7 @@ class ZekeSampler:
         # print(energy_list)
 
         # 出現回数を取り出し
-        occurrences_list = result["result"]["vectors"]["num_occurrences"][
-            "data"
-        ]
+        occurrences_list = result["result"]["vectors"]["num_occurrences"]["data"]
         # print(occurrences_list)
 
         # サンプルをリストとして取り出し
@@ -538,9 +526,7 @@ class NQSSampler:
         # print(index_map)
 
         # 上記のindexマップを利用してタプルの内容をindexで書き換え
-        qubo_index = {
-            (index_map[k[0]], index_map[k[1]]): v for k, v in qubo.items()
-        }
+        qubo_index = {(index_map[k[0]], index_map[k[1]]): v for k, v in qubo.items()}
         # print(qubo_index)
 
         # タプル内をソート
@@ -654,9 +640,7 @@ class NQSLocalSampler:
         # print(index_map)
 
         # 上記のindexマップを利用してタプルの内容をindexで書き換え
-        qubo_index = {
-            (index_map[k[0]], index_map[k[1]]): v for k, v in qubo.items()
-        }
+        qubo_index = {(index_map[k[0]], index_map[k[1]]): v for k, v in qubo.items()}
         # print(qubo_index)
 
         # タプル内をソート
