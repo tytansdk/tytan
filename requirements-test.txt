@@ -1,5 +1,5 @@
 # pip install -r requirements-test.txt
 pytest
 pytest-cov
-pytest-vcr
+pytest-recording
 vcrpy
