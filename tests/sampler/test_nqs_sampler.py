@@ -1,10 +1,17 @@
 import os
 import pytest
 import sympy as sym
-
+import vcr.stubs.httpx_stubs
+from tests.support.custom_stub import make_vcr_request
 from tytan import qubo
 from tytan.sampler import NQSSampler
 
+
+@pytest.mark.vcr(
+    filter_headers=["x-api-key"],
+    match_on=["uri", "method"],
+    custom_patches=((vcr.stubs.httpx_stubs, "_make_vcr_request", make_vcr_request),),
+)
 def test_nqs_sampler_run():
     x, y, z = sym.symbols("x y z")
     expr = 3 * x**2 + 2 * x * y + 4 * y**2 + z**2 + 2 * x * z + 2 * y * z

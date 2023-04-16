@@ -1,0 +1,50 @@
+interactions:
+- request:
+    body: !!binary |
+      LS00NGE5NDQ1MmQ2Mzc2NTllNDQxODM1Njc1Y2RlMmUwMg0KQ29udGVudC1EaXNwb3NpdGlvbjog
+      Zm9ybS1kYXRhOyBuYW1lPSJwb3B1bGF0aW9uIg0KDQo1MDANCi0tNDRhOTQ0NTJkNjM3NjU5ZTQ0
+      MTgzNTY3NWNkZTJlMDINCkNvbnRlbnQtRGlzcG9zaXRpb246IGZvcm0tZGF0YTsgbmFtZT0idGlt
+      ZUxpbWl0U2VjIg0KDQozMA0KLS00NGE5NDQ1MmQ2Mzc2NTllNDQxODM1Njc1Y2RlMmUwMg0KQ29u
+      dGVudC1EaXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJpdGVyIg0KDQoxMDAwMA0KLS00NGE5
+      NDQ1MmQ2Mzc2NTllNDQxODM1Njc1Y2RlMmUwMg0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1k
+      YXRhOyBuYW1lPSJ6aXBmaWxlIjsgZmlsZW5hbWU9IjAxR1k1M044OUhOMFNXWU5CODhUR1pQUVFG
+      LnppcCINCkNvbnRlbnQtVHlwZTogZGF0YTphcHBsaWNhdGlvbi9vY3RldC1zdHJlYW0NCg0KUEsD
+      BBQAAAAIALmykFZTJ1OXIQAAACMAAAAKAAAAcXVib193LmNzdtOp1KnSqeDlqtQx0THSMeLlqtIx
+      0DEEMSqADAMdY14uAFBLAQIUAxQAAAAIALmykFZTJ1OXIQAAACMAAAAKAAAAAAAAAAAAAACAAQAA
+      AABxdWJvX3cuY3N2UEsFBgAAAAABAAEAOAAAAEkAAAAAAA0KLS00NGE5NDQ1MmQ2Mzc2NTllNDQx
+      ODM1Njc1Y2RlMmUwMi0tDQo=
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip
+      connection:
+      - keep-alive
+      content-length:
+      - '644'
+      content-type:
+      - multipart/form-data; boundary=44a94452d637659e441835675cde2e02
+      host:
+      - tytan-api.blueqat.com
+      user-agent:
+      - blueqat
+    method: POST
+    uri: https://tytan-api.blueqat.com/v1/tasks/nqs
+  response:
+    content: '{"energy":0.0,"result":{"x":0,"y":0,"z":0},"time":3.718784809112549}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '68'
+      Content-Type:
+      - application/json
+      Date:
+      - Sun, 16 Apr 2023 13:22:02 GMT
+      Server:
+      - nginx
+      Vary:
+      - Accept-Encoding
+    http_version: HTTP/1.1
+    status_code: 200
+version: 1
