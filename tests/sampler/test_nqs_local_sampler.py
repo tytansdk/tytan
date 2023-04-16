@@ -8,7 +8,9 @@ import vcr.stubs.httpx_stubs
 
 @pytest.mark.vcr(
     match_on=["uri", "method"],
-    custom_patches=((vcr.stubs.httpx_stubs, "_make_vcr_request", make_vcr_request),),
+    custom_patches=(
+        (vcr.stubs.httpx_stubs, "_make_vcr_request", make_vcr_request),
+    ),
 )
 def test_nqs_local_sampler_run():
     x, y, z = sym.symbols("x y z")

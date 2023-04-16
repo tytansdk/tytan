@@ -2,6 +2,7 @@ import sympy as sp
 import numpy as np
 import pandas as pd
 
+
 class Compile:
     def __init__(self, expr):
         self.expr = expr
@@ -18,7 +19,7 @@ class Compile:
 
         # sympy
         if isinstance(self.expr, (sp.core.add.Add, sp.core.symbol.Symbol)):
-            #展開されていない式は展開する
+            # 展開されていない式は展開する
             self.expr = sp.expand(self.expr)
 
             # 式で使用されている変数を確認
@@ -64,7 +65,7 @@ class Compile:
             for i, r in enumerate(self.expr):
                 for j, c in enumerate(r):
                     if i <= j:
-                        qubo[(f'q{i}', f'q{j}')] = c
+                        qubo[(f"q{i}", f"q{j}")] = c
 
             return qubo, offset
 
@@ -78,11 +79,11 @@ class Compile:
             for i, r in enumerate(self.expr.values):
                 for j, c in enumerate(r):
                     if i <= j and c != 0:
-                        row_name, col_name = f'q{i}', f'q{j}'
-                        if self.expr.index.dtype == 'object':
+                        row_name, col_name = f"q{i}", f"q{j}"
+                        if self.expr.index.dtype == "object":
                             row_name = self.expr.index[i]
 
-                        if self.expr.columns.dtype == 'object':
+                        if self.expr.columns.dtype == "object":
                             col_name = self.expr.columns[j]
 
                         qubo[(row_name, col_name)] = c

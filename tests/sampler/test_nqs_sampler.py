@@ -10,7 +10,9 @@ from tytan.sampler import NQSSampler
 @pytest.mark.vcr(
     filter_headers=["x-api-key"],
     match_on=["uri", "method"],
-    custom_patches=((vcr.stubs.httpx_stubs, "_make_vcr_request", make_vcr_request),),
+    custom_patches=(
+        (vcr.stubs.httpx_stubs, "_make_vcr_request", make_vcr_request),
+    ),
 )
 def test_nqs_sampler_run():
     x, y, z = sym.symbols("x y z")

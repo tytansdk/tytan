@@ -3,6 +3,7 @@ import sympy as sym
 from tytan import qubo
 from tytan.sampler import GASampler
 
+
 def test_ga_sampler_run():
     x, y, z = sym.symbols("x y z")
     expr = 3 * x**2 + 2 * x * y + 4 * y**2 + z**2 + 2 * x * z + 2 * y * z

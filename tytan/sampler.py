@@ -1,61 +1,64 @@
 import numpy as np
 import pandas as pd
 
+
 class SASampler:
     def __init__(self):
-        #アニーリングステップ数（後ろに局所探索が入ることに注意）
-        #flip_count=1000, N=50, shots=100 -> 約１秒
+        # アニーリングステップ数（後ろに局所探索が入ることに注意）
+        # flip_count=1000, N=50, shots=100 -> 約１秒
         self.flip_step = 1000
-    
+
     def run(self, qubo, shots):
-        
-        #start = time.time()
-        
-        #重複なしに要素を抽出
+        # start = time.time()
+
+        # 重複なしに要素を抽出
         keys = list(set(k for tup in qubo.keys() for k in tup))
 
-        #要素のソート
+        # 要素のソート
         keys.sort()
 
-        #抽出した要素のindexマップを作成
+        # 抽出した要素のindexマップを作成
         index_map = {k: v for v, k in enumerate(keys)}
 
-        #上記のindexマップを利用してタプルの内容をindexで書き換え
-        qubo_index = {(index_map[k[0]], index_map[k[1]]): v for k, v in qubo.items()}
+        # 上記のindexマップを利用してタプルの内容をindexで書き換え
+        qubo_index = {
+            (index_map[k[0]], index_map[k[1]]): v for k, v in qubo.items()
+        }
 
-        #タプル内をソート
-        qubo_sorted = {tuple(sorted(k)): v for k, v in sorted(qubo_index.items(), key=lambda x: x[1])}
+        # タプル内をソート
+        qubo_sorted = {
+            tuple(sorted(k)): v
+            for k, v in sorted(qubo_index.items(), key=lambda x: x[1])
+        }
 
-        #量子ビット数
+        # 量子ビット数
         N = int(len(keys))
 
-        #QUBO matrix 初期化
+        # QUBO matrix 初期化
         qmatrix = np.zeros((N, N))
         for (i, j), value in qubo_sorted.items():
             qmatrix[i, j] = value
 
-        #df初期化
+        # df初期化
         columns = keys.copy()
         columns.append("energy")
         df = pd.DataFrame(columns=columns)
 
-        
-        
-        #--- 高速疑似SA ---
-        #プール初期化
+        # --- 高速疑似SA ---
+        # プール初期化
         pool_num = shots
         pool = np.random.randint(0, 2, (pool_num, N))
-        #重複は振り直し
-        #パリエーションに余裕あれば確定非重複
-        if pool_num < 2**(N - 1):
-            #print('remake 1')
+        # 重複は振り直し
+        # パリエーションに余裕あれば確定非重複
+        if pool_num < 2 ** (N - 1):
+            # print('remake 1')
             for i in range(pool_num - 1):
                 for j in range(i + 1, pool_num):
                     while (pool[i] == pool[j]).all():
                         pool[j] = np.random.randint(0, 2, N)
         else:
-            #パリエーションに余裕なければ3トライ重複可
-            #print('remake 2')
+            # パリエーションに余裕なければ3トライ重複可
+            # print('remake 2')
             for i in range(pool_num - 1):
                 for j in range(i + 1, pool_num):
                     count = 0
@@ -64,187 +67,264 @@ class SASampler:
                         count += 1
                         if count == 3:
                             break
-        
-        #スコア初期化
-        score = np.array([q@qmatrix@q for q in pool])
-        
-        #フリップ数リスト（2個まで下がる）
-        flip = np.sort(np.random.rand(self.flip_step)**2)[::-1]
-        flip = (  flip * max(0, N*0.5 - 2)  ).astype(int) + 2
-        #print(flip)
-        
-        #フリップマスクリスト
+
+        # スコア初期化
+        score = np.array([q @ qmatrix @ q for q in pool])
+
+        # フリップ数リスト（2個まで下がる）
+        flip = np.sort(np.random.rand(self.flip_step) ** 2)[::-1]
+        flip = (flip * max(0, N * 0.5 - 2)).astype(int) + 2
+        # print(flip)
+
+        # フリップマスクリスト
         flip_mask = [[1] * flip[0] + [0] * (N - flip[0])]
         for i in range(1, self.flip_step):
             tmp = [1] * flip[i] + [0] * (N - flip[i])
             np.random.shuffle(tmp)
-            #前と重複なら振り直し
+            # 前と重複なら振り直し
             while tmp == flip_mask[-1]:
                 np.random.shuffle(tmp)
             flip_mask.append(tmp)
         flip_mask = np.array(flip_mask, bool)
-        #print(flip_mask.shape)
-        
-        #局所探索フリップマスクリスト
+        # print(flip_mask.shape)
+
+        # 局所探索フリップマスクリスト
         single_flip_mask = np.zeros((N, N), bool)
         for i in range(N):
             single_flip_mask[i, i] = True
-        #print(single_flip_mask.shape)
-        
-        #end = time.time()
-        #print('{}s'.format(round(end - start, 4)))
-        
-        #アニーリング
-        #集団まるごと温度を下げる
-        
-        #start = time.time()
-        
+        # print(single_flip_mask.shape)
+
+        # end = time.time()
+        # print('{}s'.format(round(end - start, 4)))
+
+        # アニーリング
+        # 集団まるごと温度を下げる
+
+        # start = time.time()
+
         for fm in flip_mask:
-            #フリップ後
+            # フリップ後
             pool2 = np.where(fm, 1 - pool, pool)
-            score2 = np.array([q@qmatrix@q for q in pool2])
-            
-            #更新マスク
+            score2 = np.array([q @ qmatrix @ q for q in pool2])
+
+            # 更新マスク
             update_mask = score2 < score
-            
-            #更新
+
+            # 更新
             pool[update_mask] = pool2[update_mask]
             score[update_mask] = score2[update_mask]
-        
-        #end = time.time()
-        #print('{}s'.format(round(end - start, 4)))
-        
-        #start = time.time()
-        
-        #最後に1フリップ局所探索
-        #集団まるごと
+
+        # end = time.time()
+        # print('{}s'.format(round(end - start, 4)))
+
+        # start = time.time()
+
+        # 最後に1フリップ局所探索
+        # 集団まるごと
         for fm in single_flip_mask:
-            #フリップ後
+            # フリップ後
             pool2 = np.where(fm, 1 - pool, pool)
-            score2 = np.array([q@qmatrix@q for q in pool2])
-            
-            #更新マスク
+            score2 = np.array([q @ qmatrix @ q for q in pool2])
+
+            # 更新マスク
             update_mask = score2 < score
-            
-            #更新
+
+            # 更新
             pool[update_mask] = pool2[update_mask]
             score[update_mask] = score2[update_mask]
-        
-        #end = time.time()
-        #print('{}s'.format(round(end - start, 4)))
-        
-        #後処理1
+
+        # end = time.time()
+        # print('{}s'.format(round(end - start, 4)))
+
+        # 後処理1
         expand = np.hstack((pool, score.reshape(pool_num, 1)))
         df = pd.DataFrame(expand, columns=df.columns)
-        #----------
+        # ----------
 
-        #後処理2
+        # 後処理2
         grouped = df.groupby(list(df.columns))
-        counts = grouped.size().reset_index(name='occerrence')
-        counts = counts.sort_values('energy').reset_index(drop=True)
-        dict_data = counts.iloc[:,0:-2].to_dict(orient="records")
-        result_dict = [[dict_data[index], row['energy'], int(row['occerrence'])] for index,row in counts.iterrows()]
- 
+        counts = grouped.size().reset_index(name="occerrence")
+        counts = counts.sort_values("energy").reset_index(drop=True)
+        dict_data = counts.iloc[:, 0:-2].to_dict(orient="records")
+        result_dict = [
+            [dict_data[index], row["energy"], int(row["occerrence"])]
+            for index, row in counts.iterrows()
+        ]
+
         return result_dict
+
 
 class GASampler:
     def __init__(self):
         self.max_gen = 1000000
         self.max_count = 2
-    
+
     def run(self, qubo, shots):
-        #重複なしに要素を抽出
+        # 重複なしに要素を抽出
         keys = list(set(k for tup in qubo.keys() for k in tup))
 
-        #要素のソート
+        # 要素のソート
         keys.sort()
 
-        #抽出した要素のindexマップを作成
+        # 抽出した要素のindexマップを作成
         index_map = {k: v for v, k in enumerate(keys)}
 
-        #上記のindexマップを利用してタプルの内容をindexで書き換え
-        qubo_index = {(index_map[k[0]], index_map[k[1]]): v for k, v in qubo.items()}
+        # 上記のindexマップを利用してタプルの内容をindexで書き換え
+        qubo_index = {
+            (index_map[k[0]], index_map[k[1]]): v for k, v in qubo.items()
+        }
 
-        #タプル内をソート
-        qubo_sorted = {tuple(sorted(k)): v for k, v in sorted(qubo_index.items(), key=lambda x: x[1])}
+        # タプル内をソート
+        qubo_sorted = {
+            tuple(sorted(k)): v
+            for k, v in sorted(qubo_index.items(), key=lambda x: x[1])
+        }
 
-        #量子ビット数
+        # 量子ビット数
         N = int(len(keys))
 
-        #QUBO matrix 初期化
+        # QUBO matrix 初期化
         qmatrix = np.zeros((N, N))
         for (i, j), value in qubo_sorted.items():
             qmatrix[i, j] = value
 
-        #df初期化
+        # df初期化
         columns = keys.copy()
         columns.append("energy")
         df = pd.DataFrame(columns=columns)
 
-        #--- GA ---
-        #プール初期化
-        pool_num = max(shots, 2) #N * 10
+        # --- GA ---
+        # プール初期化
+        pool_num = max(shots, 2)  # N * 10
         pool = np.random.randint(0, 2, (pool_num, N))
-        #スコア初期化
-        score = np.array([q@qmatrix@q for q in pool])
+        # スコア初期化
+        score = np.array([q @ qmatrix @ q for q in pool])
 
-        #進化
+        # 進化
         last_mean_score = 99999
         best_score = np.copy(score)
         count = 0
         sw = True
-        
+
         for gen in range(1, self.max_gen + 1):
-            #親
+            # 親
             parent_id = np.random.choice(range(pool_num), 2, replace=False)
             parent = pool[parent_id]
 
             if N > 2:
-                #交叉点
-                cross_point = np.sort(np.random.choice(range(1, N), 2, replace=False))
-                #家族
-                c = np.array([parent[0],
-                              parent[1],
-                              np.hstack((parent[0, :cross_point[0]], parent[0, cross_point[0]:cross_point[1]], parent[1, cross_point[1]:])),
-                              np.hstack((parent[0, :cross_point[0]], parent[1, cross_point[0]:cross_point[1]], parent[0, cross_point[1]:])),
-                              np.hstack((parent[0, :cross_point[0]], parent[1, cross_point[0]:cross_point[1]], parent[1, cross_point[1]:])),
-                              np.hstack((parent[1, :cross_point[0]], parent[0, cross_point[0]:cross_point[1]], parent[0, cross_point[1]:])),
-                              np.hstack((parent[1, :cross_point[0]], parent[0, cross_point[0]:cross_point[1]], parent[1, cross_point[1]:])),
-                              np.hstack((parent[1, :cross_point[0]], parent[1, cross_point[0]:cross_point[1]], parent[0, cross_point[1]:]))])
-                #評価
-                s = np.array([c[0]@qmatrix@c[0], c[1]@qmatrix@c[1], c[2]@qmatrix@c[2], c[3]@qmatrix@c[3], c[4]@qmatrix@c[4], c[5]@qmatrix@c[5]])
-            
-            elif N == 2:
-                #家族
-                c = np.array([parent[0],
-                              parent[1],
-                              [parent[0, 0], parent[1, 1]],
-                              [parent[0, 1], parent[1, 0]]])
-                #評価
-                s = np.array([c[0]@qmatrix@c[0], c[1]@qmatrix@c[1], c[2]@qmatrix@c[2], c[3]@qmatrix@c[3]])
-            
-            elif N == 1:
-                #家族
-                c = np.array([parent[0],
-                              parent[1],
-                              1 - parent[0],
-                              1 - parent[1]])
-                #評価
-                s = np.array([c[0]@qmatrix@c[0], c[1]@qmatrix@c[1], c[2]@qmatrix@c[2], c[3]@qmatrix@c[3]])
+                # 交叉点
+                cross_point = np.sort(
+                    np.random.choice(range(1, N), 2, replace=False)
+                )
+                # 家族
+                c = np.array(
+                    [
+                        parent[0],
+                        parent[1],
+                        np.hstack(
+                            (
+                                parent[0, : cross_point[0]],
+                                parent[0, cross_point[0] : cross_point[1]],
+                                parent[1, cross_point[1] :],
+                            )
+                        ),
+                        np.hstack(
+                            (
+                                parent[0, : cross_point[0]],
+                                parent[1, cross_point[0] : cross_point[1]],
+                                parent[0, cross_point[1] :],
+                            )
+                        ),
+                        np.hstack(
+                            (
+                                parent[0, : cross_point[0]],
+                                parent[1, cross_point[0] : cross_point[1]],
+                                parent[1, cross_point[1] :],
+                            )
+                        ),
+                        np.hstack(
+                            (
+                                parent[1, : cross_point[0]],
+                                parent[0, cross_point[0] : cross_point[1]],
+                                parent[0, cross_point[1] :],
+                            )
+                        ),
+                        np.hstack(
+                            (
+                                parent[1, : cross_point[0]],
+                                parent[0, cross_point[0] : cross_point[1]],
+                                parent[1, cross_point[1] :],
+                            )
+                        ),
+                        np.hstack(
+                            (
+                                parent[1, : cross_point[0]],
+                                parent[1, cross_point[0] : cross_point[1]],
+                                parent[0, cross_point[1] :],
+                            )
+                        ),
+                    ]
+                )
+                # 評価
+                s = np.array(
+                    [
+                        c[0] @ qmatrix @ c[0],
+                        c[1] @ qmatrix @ c[1],
+                        c[2] @ qmatrix @ c[2],
+                        c[3] @ qmatrix @ c[3],
+                        c[4] @ qmatrix @ c[4],
+                        c[5] @ qmatrix @ c[5],
+                    ]
+                )
 
-            #エリート選択
+            elif N == 2:
+                # 家族
+                c = np.array(
+                    [
+                        parent[0],
+                        parent[1],
+                        [parent[0, 0], parent[1, 1]],
+                        [parent[0, 1], parent[1, 0]],
+                    ]
+                )
+                # 評価
+                s = np.array(
+                    [
+                        c[0] @ qmatrix @ c[0],
+                        c[1] @ qmatrix @ c[1],
+                        c[2] @ qmatrix @ c[2],
+                        c[3] @ qmatrix @ c[3],
+                    ]
+                )
+
+            elif N == 1:
+                # 家族
+                c = np.array(
+                    [parent[0], parent[1], 1 - parent[0], 1 - parent[1]]
+                )
+                # 評価
+                s = np.array(
+                    [
+                        c[0] @ qmatrix @ c[0],
+                        c[1] @ qmatrix @ c[1],
+                        c[2] @ qmatrix @ c[2],
+                        c[3] @ qmatrix @ c[3],
+                    ]
+                )
+
+            # エリート選択
             select_id = np.argsort(s)[:2]
-            #交代
+            # 交代
             pool[parent_id] = c[select_id]
             score[parent_id] = s[select_id]
-            #進行表示1
+            # 進行表示1
             if gen % 500 == 0:
-                print('-', end='')
+                print("-", end="")
                 sw = False
                 if gen % 10000 == 0:
-                    print(' {}/{}'.format(gen, self.max_gen))
+                    print(" {}/{}".format(gen, self.max_gen))
                     sw = True
-            #終了判定
+            # 終了判定
             if gen % 10 == 0:
                 if np.sum(score - best_score) == 0:
                     count += 1
@@ -253,35 +333,39 @@ class GASampler:
                     count = 0
                 if count >= self.max_count:
                     break
-        #進行表示2
-        if not sw: print()
-        print('Automatic end at gen {}/{}'.format(gen, self.max_gen))
+        # 進行表示2
+        if not sw:
+            print()
+        print("Automatic end at gen {}/{}".format(gen, self.max_gen))
 
-        #後処理1
+        # 後処理1
         expand = np.hstack((pool, score.reshape(pool_num, 1)))
         df = pd.DataFrame(expand, columns=df.columns)
-        #----------
+        # ----------
 
-        #後処理2
+        # 後処理2
         grouped = df.groupby(list(df.columns))
-        counts = grouped.size().reset_index(name='occerrence')
-        counts = counts.sort_values('energy').reset_index(drop=True)
-        dict_data = counts.iloc[:,0:-2].to_dict(orient="records")
-        result_dict = [[dict_data[index], row['energy'], int(row['occerrence'])] for index,row in counts.iterrows()]
- 
+        counts = grouped.size().reset_index(name="occerrence")
+        counts = counts.sort_values("energy").reset_index(drop=True)
+        dict_data = counts.iloc[:, 0:-2].to_dict(orient="records")
+        result_dict = [
+            [dict_data[index], row["energy"], int(row["occerrence"])]
+            for index, row in counts.iterrows()
+        ]
+
         return result_dict
 
-class ZekeSampler:
 
+class ZekeSampler:
     def __init__(self):
         self.API_ENDPOINT = "https://tytan-api.blueqat.com/v1/"
         return
-    
+
     def post_request(self, path, body, api_key):
         import gzip
         import json
         import urllib.request
-        
+
         headers = {
             "Content-Type": "application/json",
             "X-Api-Key": api_key,
@@ -305,110 +389,124 @@ class ZekeSampler:
     def create_task(self, body, api_key):
         path = "tasks/create"
         return self.post_request(path, body, api_key)
-    
+
     def run(self, qubo, shots, api_key):
-        
-        #重複なしに要素を抽出
+        # 重複なしに要素を抽出
         keys = list(set(k for tup in qubo.keys() for k in tup))
-        #print(keys)
+        # print(keys)
 
-        #抽出した要素のindexマップを作成
+        # 抽出した要素のindexマップを作成
         index_map = {k: v for v, k in enumerate(keys)}
-        #print(index_map)
+        # print(index_map)
 
-        #上記のindexマップを利用してタプルの内容をindexで書き換え
-        qubo_index = {(index_map[k[0]], index_map[k[1]]): v for k, v in qubo.items()}
-        #print(qubo_index)
+        # 上記のindexマップを利用してタプルの内容をindexで書き換え
+        qubo_index = {
+            (index_map[k[0]], index_map[k[1]]): v for k, v in qubo.items()
+        }
+        # print(qubo_index)
 
-        #タプル内をソート
-        qubo_sorted = {tuple(sorted(k)): v for k, v in sorted(qubo_index.items(), key=lambda x: x[1])}
-        #print(qubo_sorted)
+        # タプル内をソート
+        qubo_sorted = {
+            tuple(sorted(k)): v
+            for k, v in sorted(qubo_index.items(), key=lambda x: x[1])
+        }
+        # print(qubo_sorted)
 
-        #量子ビット数
+        # 量子ビット数
         N = int(len(keys))
 
-        #QUBO matrix 初期化
+        # QUBO matrix 初期化
         qmatrix = np.zeros((N, N))
-        
+
         quadratic_biases = []
         quadratic_head = []
         quadratic_tail = []
-        
+
         for (i, j), value in qubo_sorted.items():
             qmatrix[i, j] = value
-            
+
             if i != j:
                 quadratic_biases.append(float(value))
                 quadratic_head.append(i)
                 quadratic_tail.append(j)
-                
+
         variable_labels = keys
         linear_biases = np.diag(qmatrix)
 
-        #print(qmatrix)
-        #print(variable_labels)
-        #print(linear_biases)
-        #print(quadratic_biases)
-        #print(quadratic_head)
-        #print(quadratic_tail)
-        
+        # print(qmatrix)
+        # print(variable_labels)
+        # print(linear_biases)
+        # print(quadratic_biases)
+        # print(quadratic_head)
+        # print(quadratic_tail)
+
         num_interactions = len(quadratic_biases)
-        
+
         # クラウドにpostするBQM
-        bqm = {'type': 'BinaryQuadraticModel',
-               'version': {'bqm_schema': '3.0.0'},
-               'use_bytes': False,
-               'index_type': 'int32',
-               'bias_type': 'float64',
-               'num_variables': N,
-               'num_interactions': num_interactions,
-               'variable_labels': list(variable_labels),
-               'variable_type': 'BINARY',
-               'offset': 0.0,
-               'info': {},
-               'linear_biases': list(linear_biases),
-               'quadratic_biases': quadratic_biases,
-               'quadratic_head': quadratic_head,
-               'quadratic_tail': quadratic_tail}
-        
+        bqm = {
+            "type": "BinaryQuadraticModel",
+            "version": {"bqm_schema": "3.0.0"},
+            "use_bytes": False,
+            "index_type": "int32",
+            "bias_type": "float64",
+            "num_variables": N,
+            "num_interactions": num_interactions,
+            "variable_labels": list(variable_labels),
+            "variable_type": "BINARY",
+            "offset": 0.0,
+            "info": {},
+            "linear_biases": list(linear_biases),
+            "quadratic_biases": quadratic_biases,
+            "quadratic_head": quadratic_head,
+            "quadratic_tail": quadratic_tail,
+        }
+
         data = {
             "bqm": bqm,
             "shots": shots,
         }
-        
+
         result = self.create_task(data, api_key)
-        #print(result)
-        
-        #エネルギーを取り出し
+        # print(result)
+
+        # エネルギーを取り出し
         energy_list = result["result"]["vectors"]["energy"]["data"]
-        #print(energy_list)
-        
-        #出現回数を取り出し
-        occurrences_list = result["result"]["vectors"]["num_occurrences"]["data"]
-        #print(occurrences_list)
-        
-        #サンプルをリストとして取り出し
+        # print(energy_list)
+
+        # 出現回数を取り出し
+        occurrences_list = result["result"]["vectors"]["num_occurrences"][
+            "data"
+        ]
+        # print(occurrences_list)
+
+        # サンプルをリストとして取り出し
         num_digits = result["result"]["num_variables"]
         sample_data = result["result"]["sample_data"]["data"]
-        #print(sample_data)
+        # print(sample_data)
 
-        binary_str = [format(i[0], f'0{num_digits}b') for i in sample_data]
+        binary_str = [format(i[0], f"0{num_digits}b") for i in sample_data]
         binary_list = [[int(bit) for bit in reversed(i)] for i in binary_str]
-        #print(binary_list)
-        
+        # print(binary_list)
+
         variable_labels = result["result"]["variable_labels"]
-        #print(variable_labels)
-        
+        # print(variable_labels)
+
         result_list = []
         for index, item in enumerate(binary_list):
-            result_list.append([{k: v for k, v in zip(variable_labels, item)}, energy_list[index], occurrences_list[index]])
-        
-        #print(result_list)
-        
-        return result_list
-    
-class NQSSampler:
+            result_list.append(
+                [
+                    {k: v for k, v in zip(variable_labels, item)},
+                    energy_list[index],
+                    occurrences_list[index],
+                ]
+            )
 
+        # print(result_list)
+
+        return result_list
+
+
+class NQSSampler:
     from typing import Optional
 
     def __init__(self, api_key: Optional[str] = None):
@@ -424,7 +522,6 @@ class NQSSampler:
         population: Optional[int] = 500,
         api_key: Optional[str] = None,
     ):
-
         import ulid
         import httpx
         import json
@@ -441,7 +538,9 @@ class NQSSampler:
         # print(index_map)
 
         # 上記のindexマップを利用してタプルの内容をindexで書き換え
-        qubo_index = {(index_map[k[0]], index_map[k[1]]): v for k, v in qubo.items()}
+        qubo_index = {
+            (index_map[k[0]], index_map[k[1]]): v for k, v in qubo.items()
+        }
         # print(qubo_index)
 
         # タプル内をソート
@@ -510,7 +609,6 @@ class NQSSampler:
         z_file.writestr("qubo_w.csv", qubo, zipfile.ZIP_DEFLATED)
         z_file.close()
 
-
     def __get_headers(self, api_key: Optional[str]) -> dict[str, str]:
         assert api_key is not None, (
             "Please specify your api_key. "
@@ -523,22 +621,23 @@ class NQSSampler:
             "accept-encoding": "gzip",
         }
 
-class NQSLocalSampler:
 
+class NQSLocalSampler:
     from typing import Optional
-    
-    def __init__(self, api_endpoint:str="http://localhost:8080/ngqs/v1/solve") -> None:
+
+    def __init__(
+        self, api_endpoint: str = "http://localhost:8080/ngqs/v1/solve"
+    ) -> None:
         self.API_ENDPOINT = api_endpoint
         return
-    
+
     def run(
         self,
         qubo: dict,
         time_limit_sec: Optional[int] = 30,
         iter: Optional[int] = 10000,
-        population: Optional[int] = 500
+        population: Optional[int] = 500,
     ):
-
         import ulid
         import httpx
         import json
@@ -555,7 +654,9 @@ class NQSLocalSampler:
         # print(index_map)
 
         # 上記のindexマップを利用してタプルの内容をindexで書き換え
-        qubo_index = {(index_map[k[0]], index_map[k[1]]): v for k, v in qubo.items()}
+        qubo_index = {
+            (index_map[k[0]], index_map[k[1]]): v for k, v in qubo.items()
+        }
         # print(qubo_index)
 
         # タプル内をソート
@@ -614,7 +715,7 @@ class NQSLocalSampler:
 
         result = json.loads(r.text)
         return result
-    
+
     def __to_zip(self, qubo: str, filename: str):
         import zipfile
 
