@@ -505,6 +505,8 @@ class ZekeSampler:
 
         return result_list
 
+
+class NQSSampler:
     from typing import Dict, Optional
 
     def __init__(self, api_key: Optional[str] = None):
