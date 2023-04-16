@@ -505,9 +505,7 @@ class ZekeSampler:
 
         return result_list
 
-
-class NQSSampler:
-    from typing import Optional
+    from typing import Dict, Optional
 
     def __init__(self, api_key: Optional[str] = None):
         self.API_ENDPOINT = "https://tytan-api.blueqat.com/v1"
@@ -609,7 +607,7 @@ class NQSSampler:
         z_file.writestr("qubo_w.csv", qubo, zipfile.ZIP_DEFLATED)
         z_file.close()
 
-    def __get_headers(self, api_key: Optional[str]) -> dict[str, str]:
+    def __get_headers(self, api_key: Optional[str]) -> Dict[str, str]:
         assert api_key is not None, (
             "Please specify your api_key. "
             "You can get it at the following URL. "
