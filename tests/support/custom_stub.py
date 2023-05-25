@@ -1,5 +1,6 @@
 from vcr.request import Request as VcrRequest
 
+
 def make_vcr_request(httpx_request, **kwargs):
     try:
         body = httpx_request.read().decode("utf-8")

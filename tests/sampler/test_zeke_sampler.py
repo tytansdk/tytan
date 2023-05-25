@@ -5,6 +5,7 @@ import sympy as sym
 from tytan import qubo
 from tytan.sampler import ZekeSampler
 
+
 @pytest.mark.vcr(filter_headers=["x-api-key"])
 def test_zeke_sampler_run():
     x, y, z = sym.symbols("x y z")
