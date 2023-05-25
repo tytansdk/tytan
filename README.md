@@ -6,40 +6,30 @@
 - （すべての記法）tytan.qubo.Compile(expr).get_qubo() → tytan.Compile(expr).get_qubo()　になりました
 
 # TYTAN（タイタン）
-大規模QUBOアニーリングのためのSDK
+大規模QUBOアニーリングのためのSDKです。
 
-## 問題形式
-QUBO形式
+**QUBO**を共通の入力形式とし、複数のサンプラーから選んでアニーリングできます。
 
 ## 問題サイズ
 ローカル：1,000量子ビット程度
+
 API経由：1,000-10万量子ビット程度
 
 ## インストール
-pipインストールで簡単に導入ができますが、
-
-```
-pip install tytan
-```
-
-github版の方が更新が早いので、こちらの方が基本的には最新です。
-
+更新が頻繁なためgithubからのインストールを推奨します。
 ```
 pip install git+https://github.com/tytansdk/tytan
 ```
 
-## 計算
-
-### 事前準備
-
+pipインストールはこちらです。
 ```
-# 以下のコード例ではsympyが必要
-pip install sympy
+pip install tytan
 ```
 
-### コード例
+## サンプルコード
 基本的には定式化を行い、ソルバーと呼ばれる問題を解いてくれるプログラムにdict形式で入力をします。下記の例ではsympyを使って数式から入力をしています。数式以外にもcsvやnumpy matrixやpandas dataframeなど様々な入出力に対応しています。
 
+sympy記法
 ```
 #from tytan import symbols, Compile, sampler
 from tytan import *
@@ -58,10 +48,11 @@ solver = sampler.SASampler()
 
 # 計算
 result = solver.run(qubo, shots=100)
-print(result)
+for r in result:
+    print(r)
 ```
 
-numpyの場合
+numpy記法
 ```
 #from tytan import symbols, Compile, sampler
 from tytan import *
@@ -78,10 +69,11 @@ solver = sampler.SASampler()
 
 # 計算
 result = solver.run(qubo, shots=100)
-print(result)
+for r in result:
+    print(r)
 ```
 
-pandas（csv）の場合
+pandas記法（csv読み込み）
 ```
 #from tytan import symbols, Compile, sampler
 from tytan import *
@@ -99,14 +91,22 @@ solver = sampler.SASampler()
 
 # 計算
 result = solver.run(qubo, shots=100)
-print(result)
+for r in result:
+    print(r)
 ```
 
 ### 出力例
 上記の例は入力に変数のラベルごと入力できるので、定式化した変数そのままで数値が戻ってきます。配列となっている答えは、「量子ビットの値」、「エネルギー（コスト）値」、「出現確率」の順で格納されています。
 
 ```
-[[{'z': 0, 'y': 0, 'x': 0}, 0.0, 8], [{'z': 1, 'y': 0, 'x': 0}, 1.0, 15], [{'z': 0, 'y': 0, 'x': 1}, 3.0, 12], [{'z': 0, 'y': 1, 'x': 0}, 4.0, 11], [{'z': 1, 'y': 0, 'x': 1}, 6.0, 17], [{'z': 1, 'y': 1, 'x': 0}, 7.0, 12], [{'z': 0, 'y': 1, 'x': 1}, 9.0, 16], [{'z': 1, 'y': 1, 'x': 1}, 14.0, 9]]
+[{'z': 0, 'y': 0, 'x': 0}, 0.0, 8]
+[{'z': 1, 'y': 0, 'x': 0}, 1.0, 15]
+[{'z': 0, 'y': 0, 'x': 1}, 3.0, 12]
+[{'z': 0, 'y': 1, 'x': 0}, 4.0, 11]
+[{'z': 1, 'y': 0, 'x': 1}, 6.0, 17]
+[{'z': 1, 'y': 1, 'x': 0}, 7.0, 12]
+[{'z': 0, 'y': 1, 'x': 1}, 9.0, 16]
+[{'z': 1, 'y': 1, 'x': 1}, 14.0, 9]
 ```
 
 # サンプラー
