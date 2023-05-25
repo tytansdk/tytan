@@ -1,3 +1,10 @@
+# **2023/5/26 大幅更新！記法が変わりました！**
+**以下のサンプルコードは新しい記法に修正済みです。お手数ですがコードの修正をお願いします。**
+
+**▼主な変更点**
+- （sympy記法の場合）sympy.symbols() → tytan.symbols()　が推奨になりました（import sympyが不要）（ただし引き続き sympy.symbols() を使用可能）
+- （すべての記法）tytan.qubo.Compile(expr).get_qubo() → tytan.Compile(expr).get_qubo()　になりました
+
 # TYTAN（タイタン）
 大規模QUBOアニーリングのためのSDK
 
@@ -9,7 +16,7 @@ QUBO形式
 API経由：1,000-10万量子ビット程度
 
 ## インストール
-pipインストールで簡単に導入ができます。
+pipインストールで簡単に導入ができますが、
 
 ```
 pip install tytan
@@ -34,28 +41,29 @@ pip install sympy
 基本的には定式化を行い、ソルバーと呼ばれる問題を解いてくれるプログラムにdict形式で入力をします。下記の例ではsympyを使って数式から入力をしています。数式以外にもcsvやnumpy matrixやpandas dataframeなど様々な入出力に対応しています。
 
 ```
+#from tytan import symbols, Compile, sampler
 from tytan import *
-import sympy as sym
 
 # 変数を定義
-x, y, z = sym.symbols('x y z')
+x, y, z = symbols('x y z')
 
 #式を記述
 expr = 3*x**2 + 2*x*y + 4*y**2 + z**2 + 2*x*z + 2*y*z
 
 # Compileクラスを使用して、QUBOを取得
-Q, offset = qubo.Compile(expr).get_qubo()
+qubo, offset = Compile(expr).get_qubo()
 
 # サンプラーを選択
 solver = sampler.SASampler()
 
 # 計算
-result = solver.run(Q, shots=100)
+result = solver.run(qubo, shots=100)
 print(result)
 ```
 
 numpyの場合
 ```
+#from tytan import symbols, Compile, sampler
 from tytan import *
 import numpy as np
 
@@ -63,18 +71,19 @@ import numpy as np
 matrix = np.array([[3, 2, 2], [0, 4, 2], [0, 0, 2]])
 
 # Compileクラスを使用して、QUBOを取得。
-Q, offset = qubo.Compile(matrix).get_qubo()
+qubo, offset = Compile(matrix).get_qubo()
 
 # サンプラーを選択
 solver = sampler.SASampler()
 
 # 計算
-result = solver.run(Q, shots=100)
+result = solver.run(qubo, shots=100)
 print(result)
 ```
 
 pandas（csv）の場合
 ```
+#from tytan import symbols, Compile, sampler
 from tytan import *
 import pandas as pd
 
@@ -83,13 +92,13 @@ import pandas as pd
 csv_data = pd.read_csv('qubo.csv')
 
 # Compileクラスを使用して、QUBOを取得
-Q, offset = qubo.Compile(csv_data).get_qubo()
+qubo, offset = Compile(csv_data).get_qubo()
 
 # サンプラーを選択
 solver = sampler.SASampler()
 
 # 計算
-result = solver.run(Q, shots=100)
+result = solver.run(qubo, shots=100)
 print(result)
 ```
 
