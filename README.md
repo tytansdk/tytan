@@ -54,7 +54,7 @@ for r in result:
 
 numpy記法
 ```
-#from tytan import symbols, Compile, sampler
+#from tytan import Compile, sampler
 from tytan import *
 import numpy as np
 
@@ -75,7 +75,7 @@ for r in result:
 
 pandas記法（csv読み込み）
 ```
-#from tytan import symbols, Compile, sampler
+#from tytan import Compile, sampler
 from tytan import *
 import pandas as pd
 
