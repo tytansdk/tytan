@@ -1,14 +1,24 @@
 # **2023/5/26 大幅更新！記法が変わりました！**
 **以下のサンプルコードは新しい記法に修正済みです。お手数ですがコードの修正をお願いします。**
 
-**▼主な変更点**
-- （sympy記法の場合）sympy.symbols() → tytan.symbols()　が推奨になりました（import sympyが不要）（ただし引き続き sympy.symbols() を使用可能）
-- （すべての記法）tytan.qubo.Compile(expr).get_qubo() → tytan.Compile(expr).get_qubo()　になりました
+①文字定義の部分<br>
+変更前：x, y, z = symbols('x y z')　※sympy.symbolsを使用<br>
+変更後：x, y, z = symbols('x y z')　※tytan.symbolsを使用<br>
+※これによりimport sympyが不要に<br>
+※使い方はsympy.symbolsと同じ、なので引き続きsympy.symbolsを使ってもOK<br>
+
+②コンパイルの部分<br>
+変更前：QUBO, offset = qubo.Compile(H).get_qubo()<br>
+変更後：**qubo, offset = Compile(H).get_qubo()**<br>
+※quboが変数名かクラス名か紛らわしかったためquboクラスをカット<br>
+※quboは変数名として使用してください<br>
 
 # TYTAN（タイタン）
 大規模QUBOアニーリングのためのSDKです。
 
 **QUBO**を共通の入力形式とし、複数のサンプラーから選んでアニーリングできます。
+
+QUBO化には、数式を記述する方法、QUBO行列を入力する方法、QUBO行列のcsvを読み込んで入力する方法があります。
 
 ## 問題サイズ
 ローカル：1,000量子ビット程度
