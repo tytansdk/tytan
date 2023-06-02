@@ -3,10 +3,11 @@ import pandas as pd
 
 
 class SASampler:
-    def __init__(self):
+    def __init__(self, seed=None):
         # アニーリングステップ数（後ろに局所探索が入ることに注意）
         # flip_count=1000, N=50, shots=100 -> 約１秒
         self.flip_step = 1000
+        self.seed = seed
 
     def run(self, qubo, shots):
         # start = time.time()
@@ -45,6 +46,7 @@ class SASampler:
         # --- 高速疑似SA ---
         # プール初期化
         pool_num = shots
+        np.random.seed(self.seed)
         pool = np.random.randint(0, 2, (pool_num, N))
         # 重複は振り直し
         # パリエーションに余裕あれば確定非重複
@@ -153,9 +155,10 @@ class SASampler:
 
 
 class GASampler:
-    def __init__(self):
+    def __init__(self, seed=None):
         self.max_gen = 1000000
         self.max_count = 2
+        self.seed = seed
 
     def run(self, qubo, shots):
         # 重複なしに要素を抽出
@@ -192,6 +195,7 @@ class GASampler:
         # --- GA ---
         # プール初期化
         pool_num = max(shots, 2)  # N * 10
+        np.random.seed(self.seed)
         pool = np.random.randint(0, 2, (pool_num, N))
         # スコア初期化
         score = np.array([q @ qmatrix @ q for q in pool])
