@@ -125,7 +125,7 @@ for r in result:
 ```
 from tytan import symbols, Compile, sampler, Auto_array
 
-#量子ビットを用意
+#量子ビットを用意（まとめて指定）
 q0_a, q0_b, q0_c = symbols('q0_a q0_b q0_c')
 q1_a, q1_b, q1_c = symbols('q1_a q1_b q1_c')
 q2_a, q2_b, q2_c = symbols('q2_a q2_b q2_c')
@@ -150,7 +150,8 @@ solver = sampler.SASampler(seed=0)
 #サンプリング（100回）
 result = solver.run(qubo, shots=100)
 
-#すべての結果の確認
+#すべての結果を確認
+print('result')
 for r in result:
     print(r)
 
@@ -176,6 +177,7 @@ plt.show()
 ```
 
 ```
+result
 [{'q0_a': 0.0, 'q0_b': 0.0, 'q0_c': 1.0, 'q1_a': 0.0, 'q1_b': 1.0, 'q1_c': 0.0, 'q2_a': 1.0, 'q2_b': 0.0, 'q2_c': 0.0}, -6.0, 19]
 [{'q0_a': 0.0, 'q0_b': 0.0, 'q0_c': 1.0, 'q1_a': 1.0, 'q1_b': 0.0, 'q1_c': 0.0, 'q2_a': 0.0, 'q2_b': 1.0, 'q2_c': 0.0}, -6.0, 13]
 [{'q0_a': 0.0, 'q0_b': 1.0, 'q0_c': 0.0, 'q1_a': 0.0, 'q1_b': 0.0, 'q1_c': 1.0, 'q2_a': 1.0, 'q2_b': 0.0, 'q2_c': 0.0}, -6.0, 21]
@@ -194,6 +196,8 @@ get_dframe
 2  1  0  0
 get_image
 ```
+<img src="https://github.com/tytansdk/tytan/blob/main/img/img-01.png" width="15%">
+
 
 
 # サンプラー
