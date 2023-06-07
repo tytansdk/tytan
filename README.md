@@ -122,7 +122,8 @@ for r in result:
 
 ### サンプルコード２
 3ルーク問題は、3×3マスに3つのルーク（飛車）を互いに利きが及ばないように置く方法を探す問題です。2次元配列的な量子ビットの設定方法と、Auto_arrayクラスによる4種の結果可視化方法をご確認ください。
-```
+
+```python
 from tytan import symbols, Compile, sampler, Auto_array
 
 #量子ビットを用意（まとめて指定）
