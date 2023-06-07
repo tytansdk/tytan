@@ -1,29 +1,39 @@
-# **2023/5/26 大幅更新！記法が変わりました！**
-**以下のサンプルコードは新しい記法に修正済みです。お手数ですがコードの修正をお願いします。**
+# 最新情報
+2023/06/07 便利なAuto_arrayが追加されました。
 
-①文字定義の部分<br>
-変更前：x, y, z = symbols('x y z')　※sympy.symbolsを使用<br>
-変更後：x, y, z = symbols('x y z')　※tytan.symbolsを使用<br>
-※これによりimport sympyが不要に<br>
-※使い方はsympy.symbolsと同じ、なので引き続きsympy.symbolsを使ってもOK<br>
+2023/05/26 コンパイルの記法が変わりました。コードをご確認ください。
 
-②コンパイルの部分<br>
 変更前：QUBO, offset = qubo.Compile(H).get_qubo()<br>
 変更後：**qubo, offset = Compile(H).get_qubo()**<br>
-※quboが変数名かクラス名か紛らわしかったためquboクラスをカット<br>
-※quboは変数名として使用してください<br>
+
 
 # TYTAN（タイタン）
 大規模QUBOアニーリングのためのSDKです。
 
 **QUBO**を共通の入力形式とし、複数のサンプラーから選んでアニーリングできます。
 
-QUBO化には、数式を記述する方法、QUBO行列を入力する方法、QUBO行列のcsvを読み込んで入力する方法があります。
+QUBO化には、数式を記述する方法、QUBO行列を入力する方法、QUBO行列のcsvを読み込んで渡す方法があります。
+
+結果を自動で多次元配列に変換する機能を搭載。短いコードで確認できます。
 
 ## 問題サイズ
-ローカル：1,000量子ビット程度
+ローカルサンプラー：1,000量子ビット程度
 
 API経由：1,000-10万量子ビット程度
+
+# サンプラーと問題サイズ
+基本的なローカルサンプラーの他、外部のAPIサンプラーなどを組み込めるようにしています。組み込みたソルバーがあればご連絡ください。
+
+ローカルサンプラー：1,000量子ビット程度まで
+```
+SASampler
+GASampler
+```
+商用クラウドサンプラー：1,000-100,000量子ビット程度
+```
+ZekeSampler
+NQSSampler
+```
 
 ## インストール
 更新が頻繁なためgithubからのインストールを推奨します。
@@ -195,12 +205,12 @@ print('get_ndarray')
 print(arr)
 print(subs)
 
-#1つ目の結果を自動配列で確認（DataFrame形式）
+#1つ目の結果を自動配列で確認（DataFrame形式）（1次元、2次元のみ）
 df, subs = Auto_array(result[0]).get_dframe('q{}_{}')
 print('get_dframe')
 print(df)
 
-#1つ目の結果を自動配列で確認（image形式）
+#1つ目の結果を自動配列で確認（image形式）（2次元のみ）
 import matplotlib.pyplot as plt
 img, subs = Auto_array(result[0]).get_image('q{}_{}')
 print('get_image')
