@@ -119,6 +119,39 @@ for r in result:
 [{'z': 1, 'y': 1, 'x': 1}, 14.0, 9]
 ```
 
+### サンプルコード１
+3個の量子ビットのうち2個だけを1にする例です。基本的な使用方法と結果の形式をご確認ください。
+
+```python
+from tytan import symbols, Compile, sampler
+
+#量子ビットを用意する
+q0 = symbols('q0')
+q1 = symbols('q1')
+q2 = symbols('q2')
+
+#3個のうち2個だけ1になる
+H = (q0 + q1 + q2 - 2)**2
+
+#コンパイル
+qubo, offset = Compile(H).get_qubo()
+
+#サンプラー選択
+solver = sampler.SASampler()
+
+#サンプリング
+result = solver.run(qubo, shots=100)
+
+#すべての結果の確認
+for r in result:
+    print(r)
+```
+```
+[{'q0': 0.0, 'q1': 1.0, 'q2': 1.0}, -4.0, 30]
+[{'q0': 1.0, 'q1': 0.0, 'q2': 1.0}, -4.0, 22]
+[{'q0': 1.0, 'q1': 1.0, 'q2': 0.0}, -4.0, 48]
+```
+
 
 ### サンプルコード２
 3ルーク問題は、3×3マスに3つのルーク（飛車）を互いに利きが及ばないように置く方法を探す問題です。2次元配列的な量子ビットの設定方法と、Auto_arrayクラスによる4種の結果可視化方法をご確認ください。
@@ -131,13 +164,13 @@ q0_a, q0_b, q0_c = symbols('q0_a q0_b q0_c')
 q1_a, q1_b, q1_c = symbols('q1_a q1_b q1_c')
 q2_a, q2_b, q2_c = symbols('q2_a q2_b q2_c')
 
-#各行に１つだけ１
+#各行に1つだけ1
 H = 0
 H += (q0_a + q0_b + q0_c - 1)**2
 H += (q1_a + q1_b + q1_c - 1)**2
 H += (q2_a + q2_b + q2_c - 1)**2
 
-#各列に１つだけ１
+#各列に1つだけ1
 H += (q0_a + q1_a + q2_a - 1)**2
 H += (q0_b + q1_b + q2_b - 1)**2
 H += (q0_c + q1_c + q2_c - 1)**2
@@ -156,18 +189,18 @@ print('result')
 for r in result:
     print(r)
 
-#１つ目の結果を自動配列で確認（ndarray形式）
+#1つ目の結果を自動配列で確認（ndarray形式）
 arr, subs = Auto_array(result[0]).get_ndarray('q{}_{}')
 print('get_ndarray')
 print(arr)
 print(subs)
 
-#１つ目の結果を自動配列で確認（DataFrame形式）
+#1つ目の結果を自動配列で確認（DataFrame形式）
 df, subs = Auto_array(result[0]).get_dframe('q{}_{}')
 print('get_dframe')
 print(df)
 
-#１つ目の結果を自動配列で確認（image形式）
+#1つ目の結果を自動配列で確認（image形式）
 import matplotlib.pyplot as plt
 img, subs = Auto_array(result[0]).get_image('q{}_{}')
 print('get_image')
