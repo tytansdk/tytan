@@ -223,7 +223,7 @@ get_dframe
 2  1  0  0
 get_image
 ```
-<img src="https://github.com/tytansdk/tytan/blob/main/img/img-01.png" width="15%">
+<img src="https://github.com/tytansdk/tytan/blob/main/img/img-01.png" width="%">
 
 
 ## 商用利用OK
