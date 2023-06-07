@@ -21,7 +21,7 @@ QUBO化には、数式を記述する方法、QUBO行列を入力する方法、
 
 API経由：1,000-10万量子ビット程度
 
-# サンプラーと問題サイズ
+## サンプラーと問題サイズ
 基本的なローカルサンプラーの他、外部のAPIサンプラーなどを組み込めるようにしています。組み込みたソルバーがあればご連絡ください。
 
 ローカルサンプラー：1,000量子ビット程度まで
@@ -46,105 +46,53 @@ pipインストールはこちらです。
 pip install tytan
 ```
 
-## サンプルコード
-基本的には定式化を行い、ソルバーと呼ばれる問題を解いてくれるプログラムにdict形式で入力をします。下記の例ではsympyを使って数式から入力をしています。数式以外にもcsvやnumpy matrixやpandas dataframeなど様々な入出力に対応しています。
+## サンプルコード１
+3個の量子ビットのうち2個だけを1にする例です。数式を記述する方法、QUBO行列を入力する方法、QUBO行列をcsv読み込みする方法があります。
 
-sympy記法
-```
-#from tytan import symbols, Compile, sampler
-from tytan import *
+結果は「量子ビットの値」「エネルギー（コスト）値」「出現数」の順で格納されています。
 
-# 変数を定義
-x, y, z = symbols('x y z')
-
-#式を記述
-expr = 3*x**2 + 2*x*y + 4*y**2 + z**2 + 2*x*z + 2*y*z
-
-# Compileクラスを使用して、QUBOを取得
-qubo, offset = Compile(expr).get_qubo()
-
-# サンプラーを選択
-solver = sampler.SASampler()
-
-# 計算
-result = solver.run(qubo, shots=100)
-for r in result:
-    print(r)
-```
-
-numpy記法
-```
-#from tytan import Compile, sampler
-from tytan import *
-import numpy as np
-
-# QUBO行列を記述（上三角行列）
-matrix = np.array([[3, 2, 2], [0, 4, 2], [0, 0, 2]])
-
-# Compileクラスを使用して、QUBOを取得。
-qubo, offset = Compile(matrix).get_qubo()
-
-# サンプラーを選択
-solver = sampler.SASampler()
-
-# 計算
-result = solver.run(qubo, shots=100)
-for r in result:
-    print(r)
-```
-
-pandas記法（csv読み込み）
-```
-#from tytan import Compile, sampler
-from tytan import *
-import pandas as pd
-
-# QUBO行列を取得（csv, 上三角行列）
-# header, index名を設定した場合は変数名が設定した名前になる。
-csv_data = pd.read_csv('qubo.csv')
-
-# Compileクラスを使用して、QUBOを取得
-qubo, offset = Compile(csv_data).get_qubo()
-
-# サンプラーを選択
-solver = sampler.SASampler()
-
-# 計算
-result = solver.run(qubo, shots=100)
-for r in result:
-    print(r)
-```
-
-### 出力例
-上記の例は入力に変数のラベルごと入力できるので、定式化した変数そのままで数値が戻ってきます。配列となっている答えは、「量子ビットの値」、「エネルギー（コスト）値」、「出現確率」の順で格納されています。
-
-```
-[{'z': 0, 'y': 0, 'x': 0}, 0.0, 8]
-[{'z': 1, 'y': 0, 'x': 0}, 1.0, 15]
-[{'z': 0, 'y': 0, 'x': 1}, 3.0, 12]
-[{'z': 0, 'y': 1, 'x': 0}, 4.0, 11]
-[{'z': 1, 'y': 0, 'x': 1}, 6.0, 17]
-[{'z': 1, 'y': 1, 'x': 0}, 7.0, 12]
-[{'z': 0, 'y': 1, 'x': 1}, 9.0, 16]
-[{'z': 1, 'y': 1, 'x': 1}, 14.0, 9]
-```
-
-### サンプルコード１
-3個の量子ビットのうち2個だけを1にする例です。基本的な使用方法と結果をご確認ください。
-
+数式を記述
 ```python
 from tytan import symbols, Compile, sampler
 
-#量子ビットを用意する
-q0 = symbols('q0')
-q1 = symbols('q1')
-q2 = symbols('q2')
+#量子ビットを用意
+x = symbols('x')
+y = symbols('y')
+z = symbols('z')
 
-#3個のうち2個だけ1になる
-H = (q0 + q1 + q2 - 2)**2
+#式を記述（3個のうち2個だけ1にする）
+H = (x + y + z - 2)**2
 
 #コンパイル
 qubo, offset = Compile(H).get_qubo()
+
+#サンプラー選択
+solver = sampler.SASampler()
+
+#サンプリング
+result = solver.run(qubo, shots=100)
+
+#結果
+for r in result:
+    print(r)
+```
+```
+[{'x': 0.0, 'y': 1.0, 'z': 1.0}, -4.0, 24]
+[{'x': 1.0, 'y': 0.0, 'z': 1.0}, -4.0, 23]
+[{'x': 1.0, 'y': 1.0, 'z': 0.0}, -4.0, 53]
+```
+
+QUBO行列を入力
+```python
+from tytan import symbols, Compile, sampler
+import numpy as np
+
+# QUBO行列を指定（上三角行列）
+matrix = np.array([[-3, 2, 2], [0, -3, 2], [0, 0, -3]])
+print(matrix)
+
+#コンパイル
+qubo, offset = Compile(matrix).get_qubo()
 
 #サンプラー選択
 solver = sampler.SASampler()
@@ -157,14 +105,49 @@ for r in result:
     print(r)
 ```
 ```
-[{'q0': 0.0, 'q1': 1.0, 'q2': 1.0}, -4.0, 30]
-[{'q0': 1.0, 'q1': 0.0, 'q2': 1.0}, -4.0, 22]
-[{'q0': 1.0, 'q1': 1.0, 'q2': 0.0}, -4.0, 48]
+[[-3  2  2]
+ [ 0 -3  2]
+ [ 0  0 -3]]
+[{'q0': 0.0, 'q1': 1.0, 'q2': 1.0}, -4.0, 24]
+[{'q0': 1.0, 'q1': 0.0, 'q2': 1.0}, -4.0, 23]
+[{'q0': 1.0, 'q1': 1.0, 'q2': 0.0}, -4.0, 53]
 ```
 
+QUBO行列をcsv読み込み
+```python
+from tytan import symbols, Compile, sampler
+import pandas as pd
+
+# QUBO行列を読み込み（上三角行列）
+# header, index名を設定すれば量子ビット名に反映される
+matrix = pd.read_csv('matrix.csv', header=None)
+print(matrix)
+
+#コンパイル
+qubo, offset = Compile(matrix).get_qubo()
+
+#サンプラー選択
+solver = sampler.SASampler()
+
+#サンプリング
+result = solver.run(qubo, shots=100)
+
+#すべての結果の確認
+for r in result:
+    print(r)
+```
+```
+   0  1  2
+0 -3  2  2
+1  0 -3  2
+2  0  0 -3
+[{'q0': 0.0, 'q1': 1.0, 'q2': 1.0}, -4.0, 24]
+[{'q0': 1.0, 'q1': 0.0, 'q2': 1.0}, -4.0, 26]
+[{'q0': 1.0, 'q1': 1.0, 'q2': 0.0}, -4.0, 50]
+```
 
 ### サンプルコード２
-3ルーク問題は、3×3マスに3つのルーク（飛車）を互いに利きが及ばないように置く方法を探す問題です。二次元配列的な問題では量子ビットに「q_0_0」「q0_a」「q(0)(0)」のように英数字の添え字を付けます。サンプリングの乱数シードは固定できます。結果はAuto_arrayクラスを使って二次元配列で可視化できます（3種）。
+3ルーク問題は、3×3マスに3つのルーク（飛車）を互いに利きが及ばないように置く方法を探す問題です。二次元配列的な問題では量子ビットに「q_0_0」「q0_a」「q(0)(0)」のように英数字の添え字を付けます。サンプリングの乱数シードは固定できます。結果はAuto_arrayクラスを使って自動的にソート、二次元配列化できます（3形式）。
 
 ```python
 from tytan import symbols, Compile, sampler, Auto_array
@@ -243,34 +226,18 @@ get_image
 <img src="https://github.com/tytansdk/tytan/blob/main/img/img-01.png" width="15%">
 
 
+## 商用利用OK
+TYTANは商用利用前提ですので、個人での利用はもちろん企業での活用を促進しています。
 
-# サンプラー
-サンプラーと呼ばれる計算をしてくれるプログラムが搭載されています。TYTANでは基本的には簡単なソルバーを用意はしていますが、ユーザーごとにソルバーを用意して簡単に繋げられるようにしています。ローカルのサンプラーのように手元のマシンにプログラムとして搭載する以外にも、APIのサンプラーでサーバーに接続する専用サンプラーなど様々な形態に対応できます。
-
-ローカルサンプラー：
-```
-SASampler
-GASampler
-```
-
-商用クラウドサンプラー：
-```
-ZekeSampler
-NQSSampler
-```
-
-# 商用利用
-TYTANは商用利用前提ですので、個人での利用はもちろん企業での活用を許可し、促進しています。
-
-# 更新履歴
+## 更新履歴
 |日付|内容|
 |:---|:---|
-|2023/06/07|Auto_array|
-|2023/06/01|シード固定|
-|2023/05/26|全体修正|
-|2023/03/28|SASampler高速|
-|2023/03/22|GASampler|
-|2023/03/15|初期|
+|2023/06/07|Auto_array追加|
+|2023/06/01|シード固定追加|
+|2023/05/26|全体構造修正|
+|2023/03/28|SASampler高速化|
+|2023/03/22|GASampler追加|
+|2023/03/15|初期版|
 
 # コントリビューター
 https://github.com/tytansdk/tytan/graphs/contributors
