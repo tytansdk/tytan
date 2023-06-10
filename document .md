@@ -1,4 +1,4 @@
-## インストール
+## インストール（pip）
 更新が頻繁なためgithubからのインストールを推奨します。
 ```
 pip install git+https://github.com/tytansdk/tytan
@@ -65,22 +65,41 @@ q2_1 = symbols('q2_1')
 q2_2 = symbols('q2_2')
 ```
 
+## 数式の設定
+▼資料<br>
+[TYTANチュートリアル](https://github.com/tytansdk/tytan_tutorial)<br>
+[量子アニーリングのQUBOで設定可能な条件式まとめ（保存版）](https://vigne-cla.com/21-12/#toc20)（外部サイト）
 
+▼勉強会<br>
+[connpass「TYTAN」アニーリング](https://mdrft.connpass.com/)
 
-## サンプラーと問題サイズ
-基本的なローカルサンプラーの他、外部のAPIサンプラーなどを組み込めるようにしています。組み込みたソルバーがあればご連絡ください。
+▼コミュニティ<br>
+[Discord「TYTAN」](https://discord.gg/qT5etstPW8)
 
-ローカルサンプラー：1,000量子ビット程度まで
+## サンプリング
+数式をコンパイルしてサンプリングする手続きはほぼこのままです。サンプリング回数（shots）は適宜変更してください。
+```python
+#コンパイル
+qubo, offset = Compile(H).get_qubo()
+
+#サンプラー選択
+solver = sampler.SASampler()
+
+#サンプリング
+result = solver.run(qubo, shots=100)
 ```
-SASampler
-GASampler
+
+▼サンプラー一覧<br>
+ローカルサンプラー：1,000量子ビット程度まで
+```python
+SASampler()
+GASampler()
 ```
 商用クラウドサンプラー：1,000-100,000量子ビット程度
+```python
+ZekeSampler()
+NQSSampler()
 ```
-ZekeSampler
-NQSSampler
-```
-
 
 ## サンプルコード１
 3個の量子ビットのうち2個だけを1にする例です。数式を記述する方法、QUBO行列を入力する方法、QUBO行列をcsv読み込みする方法があります。
