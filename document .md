@@ -66,6 +66,8 @@ q2_2 = symbols('q2_2')
 ```
 
 ## 数式の設定
+がんばります。
+
 ▼資料<br>
 [TYTANチュートリアル](https://github.com/tytansdk/tytan_tutorial)<br>
 [量子アニーリングのQUBOで設定可能な条件式まとめ（保存版）](https://vigne-cla.com/21-12/)（外部サイト）
