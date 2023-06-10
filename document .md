@@ -1,12 +1,12 @@
 ## インストール（pip）
 更新が頻繁なためgithubからのインストールを推奨します。
 ```
-pip install git+https://github.com/tytansdk/tytan
+pip install -U git+https://github.com/tytansdk/tytan
 ```
 
 pipインストールはこちらです。
 ```
-pip install tytan
+pip install -U tytan
 ```
 
 ## import
