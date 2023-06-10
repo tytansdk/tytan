@@ -1,25 +1,71 @@
-# 最新情報
-2023/06/07 便利なAuto_arrayが追加されました。
+## インストール
+更新が頻繁なためgithubからのインストールを推奨します。
+```
+pip install git+https://github.com/tytansdk/tytan
+```
 
-2023/05/26 コンパイルの記法が変わりました。コードをご確認ください。
+pipインストールはこちらです。
+```
+pip install tytan
+```
 
-変更前：QUBO, offset = qubo.Compile(H).get_qubo()<br>
-変更後：**qubo, offset = Compile(H).get_qubo()**<br>
+## import
+コードの冒頭ですべての機能をインポートしておくことを推奨します。
+```python
+from tytan import symbols, symbols_list, symbols_define, Compile, sampler, Auto_array
+```
+または
+```python
+from tytan import *
+```
+
+## 量子ビットの定義（文字シンボルの定義）
+基礎として、次のように文字シンボルを定義します。
+```python
+x = symbols('x')
+```
+```python
+x, y, z = symbols('x y z')
+```
+```python
+q = [symbols(f'q{i}') for i in range(5)] #[q0, q1, q2, q3, q4]
+```
+
+また、1次元～多次元の量子ビットを一度に定義できる関数が2種類あります。
+
+文字シンボルを配列に定義する場合、次のようにndarray配列を得ます。
+第2引数は省略するとデフォルトの添字形式になります。
+```python
+q = symbols_list([3, 3], format_txt='q{}_{}'))
+print(q)
+```
+```
+[[q0_0 q0_1 q0_2]
+ [q1_0 q1_1 q1_2]
+ [q2_0 q2_1 q2_2]]
+```
+
+文字シンボルを個別に定義する場合、次のように実行コマンドテキスト得てからexec()で実行します。
+この方法では、IDEによっては後に構文警告（文字が未定義です）が表示されることがあります。
+第2引数は省略するとデフォルトの添字形式になります。
+```python
+command = symbols_define([3, 3], format_txt='q{}_{}')
+print(command)
+exec(command)
+```
+```
+q0_0 = symbols('q0_0')
+q0_1 = symbols('q0_1')
+q0_2 = symbols('q0_2')
+q1_0 = symbols('q1_0')
+q1_1 = symbols('q1_1')
+q1_2 = symbols('q1_2')
+q2_0 = symbols('q2_0')
+q2_1 = symbols('q2_1')
+q2_2 = symbols('q2_2')
+```
 
 
-# TYTAN（タイタン）
-大規模QUBOアニーリングのためのSDKです。
-
-QUBOを共通の入力形式とし、複数のサンプラーから選んでアニーリングできます。
-
-入力は、数式を記述する方法、QUBO行列を入力する方法、QUBO行列をcsv読み込みする方法があります。
-
-結果を自動で多次元配列に変換する機能を搭載。短いコードで確認できます。
-
-## 問題サイズ
-ローカルサンプラー：1,000量子ビット程度
-
-API経由：1,000-10万量子ビット程度
 
 ## サンプラーと問題サイズ
 基本的なローカルサンプラーの他、外部のAPIサンプラーなどを組み込めるようにしています。組み込みたソルバーがあればご連絡ください。
@@ -35,16 +81,6 @@ ZekeSampler
 NQSSampler
 ```
 
-## インストール
-更新が頻繁なためgithubからのインストールを推奨します。
-```
-pip install git+https://github.com/tytansdk/tytan
-```
-
-pipインストールはこちらです。
-```
-pip install tytan
-```
 
 ## サンプルコード１
 3個の量子ビットのうち2個だけを1にする例です。数式を記述する方法、QUBO行列を入力する方法、QUBO行列をcsv読み込みする方法があります。
