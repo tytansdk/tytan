@@ -104,7 +104,7 @@ NQSSampler()
 ```
 
 ## 結果確認
-結果はエネルギーが低い解から順にリスト形式で格納されています。
+結果はエネルギーが低い解から順にリスト形式で格納されています。「量子ビットの値」「エネルギー（コスト）値」「出現数」の順。
 ```python
 for r in result:
     print(r)
@@ -165,4 +165,44 @@ plt.show()
 ```
 <img src="https://github.com/tytansdk/tytan/blob/main/img/img-01.png" width="%">
 
+
+
+## QUBO行列を入力する方法
+数式を記述する方法だけでなく、QUBO行列を入力する方法、QUBO行列をcsv読み込みする方法にも対応しています。それぞれのコンパイルまでの例です。サンプリング以降は共通です。
+
+QUBO行列を入力する方法
+```python
+import numpy as np
+
+# QUBO行列を指定（上三角行列）
+matrix = np.array([[-3, 2, 2], [0, -3, 2], [0, 0, -3]])
+print(matrix)
+
+#コンパイル
+qubo, offset = Compile(matrix).get_qubo()
+```
+```
+[[-3  2  2]
+ [ 0 -3  2]
+ [ 0  0 -3]]
+```
+
+QUBO行列をcsv読み込みする方法
+```python
+import pandas as pd
+
+# QUBO行列を読み込み（上三角行列）
+# header, index名を設定すれば量子ビット名に反映される
+matrix = pd.read_csv('matrix.csv', header=None)
+print(matrix)
+
+#コンパイル
+qubo, offset = Compile(matrix).get_qubo()
+```
+```
+   0  1  2
+0 -3  2  2
+1  0 -3  2
+2  0  0 -3
+```
 
