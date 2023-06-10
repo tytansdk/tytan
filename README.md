@@ -1,5 +1,5 @@
 # 最新情報
-2023/06/10 便利なsymbols_list, symbols_define関数が追加されました。ドキュメントが作成されました。
+2023/06/10 便利なsymbols_list, symbols_define関数が追加されました。[ドキュメント](https://github.com/tytansdk/tytan/blob/main/document%20.md) が作成されました。
 
 2023/06/07 便利なAuto_arrayが追加されました。
 
