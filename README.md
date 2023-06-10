@@ -147,7 +147,7 @@ for r in result:
 3ルーク問題は、3×3マスに3つのルーク（飛車）を互いに利きが及ばないように置く方法を探す問題です。二次元配列的な添字を持った量子ビットをまとめて定義する関数があります（配列形式も可）。サンプリングの乱数シードは固定できます。結果を二次元配列に戻して可視化する方法も3種類あります。詳しくは [ドキュメント](https://github.com/tytansdk/tytan/blob/main/document%20.md) を参照ください。
 
 ```python
-from tytan import symbols, Compile, sampler, Auto_array
+from tytan import symbols_define, Compile, sampler, Auto_array
 
 #量子ビットを用意（まとめて定義）
 command = symbols_define([3, 3])
