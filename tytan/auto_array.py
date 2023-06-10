@@ -1,4 +1,5 @@
 import re
+import itertools
 import numpy as np
 import pandas as pd
 
@@ -31,6 +32,7 @@ class Auto_array:
     
     #numpy形式で得る
     def get_ndarray(self, format_txt):
+        
         #次元が1～5でなければエラー
         if format_txt.count('{}') not in [1, 2, 3, 4, 5]:
             raise
@@ -100,43 +102,33 @@ class Auto_array:
                     pass
             return ret, subs_sets[0]
         elif dim == 2:
-            for i, isub in enumerate(subs_sets[0]):
-                for j, jsub in enumerate(subs_sets[1]):
+            for (i, isub), (j, jsub) in itertools.product(enumerate(subs_sets[0]), enumerate(subs_sets[1])):
+                try:
+                    #あれば代入、なければ-1のまま
+                    ret[i, j] = a[format_txt.format(isub, jsub)]
+                except:
+                    pass
+        elif dim == 3:
+            for (i, isub), (j, jsub), (k, ksub) in itertools.product(enumerate(subs_sets[0]), enumerate(subs_sets[1]), enumerate(subs_sets[2])):
+                try:
+                    #あれば代入、なければ-1のまま
+                    ret[i, j, k] = a[format_txt.format(isub, jsub, ksub)]
+                except:
+                    pass
+        elif dim == 4:
+            for (i, isub), (j, jsub), (k, ksub), (l, lsub) in itertools.product(enumerate(subs_sets[0]), enumerate(subs_sets[1]), enumerate(subs_sets[2]), enumerate(subs_sets[3])):
                     try:
                         #あれば代入、なければ-1のまま
-                        ret[i, j] = a[format_txt.format(isub, jsub)]
+                        ret[i, j, k, l] = a[format_txt.format(isub, jsub, ksub, lsub)]
                     except:
                         pass
-        elif dim == 3:
-            for i, isub in enumerate(subs_sets[0]):
-                for j, jsub in enumerate(subs_sets[1]):
-                    for k, ksub in enumerate(subs_sets[2]):
-                        try:
-                            #あれば代入、なければ-1のまま
-                            ret[i, j, k] = a[format_txt.format(isub, jsub, ksub)]
-                        except:
-                            pass
-        elif dim == 4:
-            for i, isub in enumerate(subs_sets[0]):
-                for j, jsub in enumerate(subs_sets[1]):
-                    for k, ksub in enumerate(subs_sets[2]):
-                        for l, lsub in enumerate(subs_sets[3]):
-                            try:
-                                #あれば代入、なければ-1のまま
-                                ret[i, j, k, l] = a[format_txt.format(isub, jsub, ksub, lsub)]
-                            except:
-                                pass
         elif dim == 5:
-            for i, isub in enumerate(subs_sets[0]):
-                for j, jsub in enumerate(subs_sets[1]):
-                    for k, ksub in enumerate(subs_sets[2]):
-                        for l, lsub in enumerate(subs_sets[3]):
-                            for m, msub in enumerate(subs_sets[4]):
-                                try:
-                                    #あれば代入、なければ-1のまま
-                                    ret[i, j, k, l, m] = a[format_txt.format(isub, jsub, ksub, lsub, msub)]
-                                except:
-                                    pass
+            for (i, isub), (j, jsub), (k, ksub), (l, lsub), (m, msub) in itertools.product(enumerate(subs_sets[0]), enumerate(subs_sets[1]), enumerate(subs_sets[2]), enumerate(subs_sets[3]), enumerate(subs_sets[4])):
+                    try:
+                        #あれば代入、なければ-1のまま
+                        ret[i, j, k, l, m] = a[format_txt.format(isub, jsub, ksub, lsub, msub)]
+                    except:
+                        pass
         else:
             pass
         return ret, subs_sets
