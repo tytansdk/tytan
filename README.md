@@ -191,8 +191,8 @@ print('get_dframe')
 print(df)
 
 #1つ目の結果を自動配列で確認（image形式）（2次元のみ）
-import matplotlib.pyplot as plt
 img, subs = Auto_array(result[0]).get_image('q{}_{}')
+import matplotlib.pyplot as plt
 print('get_image')
 plt.imshow(img)
 plt.yticks(range(len(subs[0])), subs[0])
