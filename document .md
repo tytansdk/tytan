@@ -77,13 +77,13 @@ q2_2 = symbols('q2_2')
 [Discord「TYTAN」](https://discord.gg/qT5etstPW8)
 
 ## サンプリング
-数式をコンパイルしてサンプリングする手続きはほぼこのままです。Hの部分が数式です。サンプリング回数（shots）は適宜変更してください。
+数式をコンパイルしてサンプリングする手続きはほぼこのままです。Hの部分が数式。サンプリングの乱数シードは固定可。サンプリング回数（shots）は適宜変更してください。
 ```python
 #コンパイル
 qubo, offset = Compile(H).get_qubo()
 
 #サンプラー選択
-solver = sampler.SASampler()
+solver = sampler.SASampler(seed=None)
 
 #サンプリング
 result = solver.run(qubo, shots=100)
