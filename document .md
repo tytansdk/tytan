@@ -95,7 +95,7 @@ result = solver.run(qubo, shots=100)
 SASampler()
 GASampler()
 ```
-商用クラウドサンプラー：1,000-100,000量子ビット程度
+商用クラウドサンプラー：1,000-100,000量子ビット程度　※要詳細
 ```python
 ZekeSampler()
 NQSSampler()
