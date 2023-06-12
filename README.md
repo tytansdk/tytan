@@ -13,7 +13,7 @@ QUBOを共通の入力形式とし、複数のサンプラーから選んでア�
 
 入力は、数式を記述する方法、QUBO行列を入力する方法、QUBO行列をcsv読み込みする方法があります。
 
-結果を自動で多次元配列に変換する機能を搭載。短いコードで確認できます。
+結果を自動で多次元配列に変換する機能を搭載。短いコードで確認できます。詳しくは [ドキュメント](https://github.com/tytansdk/tytan/blob/main/document%20.md) を参照ください。
 
 ## サンプラーと問題サイズ
 基本的なローカルサンプラーの他、外部のAPIサンプラーなどを組み込めるようにしています。組み込みたソルバーがあればご連絡ください。
@@ -41,11 +41,8 @@ pip install -U tytan
 ```
 
 ## サンプルコード１
-3個の量子ビットのうち2個だけを1にする例です。数式を記述する方法、QUBO行列を入力する方法、QUBO行列をcsv読み込みする方法があります。
+3個の量子ビットのうち2個だけを1にする例です。結果は「量子ビットの値」「エネルギー（コスト）値」「出現数」の順で格納されています。
 
-結果は「量子ビットの値」「エネルギー（コスト）値」「出現数」の順で格納されています。
-
-▼数式を記述する方法
 ```python
 from tytan import *
 
@@ -74,70 +71,6 @@ for r in result:
 [{'x': 0, 'y': 1, 'z': 1}, -4.0, 2]
 [{'x': 1, 'y': 0, 'z': 1}, -4.0, 4]
 [{'x': 1, 'y': 1, 'z': 0}, -4.0, 4]
-```
-
-▼QUBO行列を入力する方法
-```python
-from tytan import *
-import numpy as np
-
-# QUBO行列を指定（上三角行列）
-matrix = np.array([[-3, 2, 2], [0, -3, 2], [0, 0, -3]])
-print(matrix)
-
-#コンパイル
-qubo, offset = Compile(matrix).get_qubo()
-
-#サンプラー選択
-solver = sampler.SASampler()
-
-#サンプリング
-result = solver.run(qubo, shots=10)
-
-#すべての結果の確認
-for r in result:
-    print(r)
-```
-```
-[[-3  2  2]
- [ 0 -3  2]
- [ 0  0 -3]]
-[{'q0': 0, 'q1': 1, 'q2': 1}, -4.0, 4]
-[{'q0': 1, 'q1': 0, 'q2': 1}, -4.0, 2]
-[{'q0': 1, 'q1': 1, 'q2': 0}, -4.0, 4]
-```
-
-▼QUBO行列をcsv読み込みする方法
-```python
-from tytan import *
-import pandas as pd
-
-# QUBO行列を読み込み（上三角行列）
-# header, index名を設定すれば量子ビット名に反映される
-matrix = pd.read_csv('matrix.csv', header=None)
-print(matrix)
-
-#コンパイル
-qubo, offset = Compile(matrix).get_qubo()
-
-#サンプラー選択
-solver = sampler.SASampler()
-
-#サンプリング
-result = solver.run(qubo, shots=10)
-
-#すべての結果の確認
-for r in result:
-    print(r)
-```
-```
-   0  1  2
-0 -3  2  2
-1  0 -3  2
-2  0  0 -3
-[{'q0': 0, 'q1': 1, 'q2': 1}, -4.0, 4]
-[{'q0': 1, 'q1': 0, 'q2': 1}, -4.0, 3]
-[{'q0': 1, 'q1': 1, 'q2': 0}, -4.0, 3]
 ```
 
 ## サンプルコード２
