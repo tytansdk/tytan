@@ -66,7 +66,7 @@ q2_2 = symbols('q2_2')
 ```
 
 ## 数式の設定
-がんばります。
+各自がんばってください。
 
 ▼資料<br>
 [TYTANチュートリアル](https://github.com/tytansdk/tytan_tutorial)<br>
@@ -88,14 +88,20 @@ qubo, offset = Compile(H).get_qubo()
 solver = sampler.SASampler(seed=None)
 
 #サンプリング
-result = solver.run(qubo, shots=100)
+result = solver.run(qubo, shots=10)
 ```
 
 ▼サンプラー一覧<br>
 ローカルサンプラー：1,000量子ビット程度まで
 ```python
-SASampler()
-GASampler()
+#SAサンプラー
+solver = sampler.SASampler(seed=None)
+result = solver.run(qubo, shots=10)
+```
+```python
+#GAサンプラー
+solver = sampler.GASampler(seed=None)
+result = solver.run(qubo, shots=200)
 ```
 商用クラウドサンプラー：1,000-100,000量子ビット程度　※要詳細
 ```python
@@ -110,9 +116,9 @@ for r in result:
     print(r)
 ```
 ```
-[{'x': 0.0, 'y': 1.0, 'z': 1.0}, -4.0, 24]
-[{'x': 1.0, 'y': 0.0, 'z': 1.0}, -4.0, 23]
-[{'x': 1.0, 'y': 1.0, 'z': 0.0}, -4.0, 53]
+[{'x': 0, 'y': 1, 'z': 1}, -4.0, 2]
+[{'x': 1, 'y': 0, 'z': 1}, -4.0, 4]
+[{'x': 1, 'y': 1, 'z': 0}, -4.0, 4]
 ```
 
 0, 1のみを取り出す場合は次の通りだが、シンボルがアルファベット順のためq11がq2より手前に来たりすることに注意！（後述の方法でシンボルの自然順ソートが可能）
@@ -121,9 +127,9 @@ for r in result:
     print(list(r[0].values()))
 ```
 ```
-[0.0, 1.0, 1.0]
-[1.0, 0.0, 1.0]
-[1.0, 1.0, 0.0]
+[0, 1, 1]
+[1, 0, 1]
+[1, 1, 0]
 ```
 
 また、1次元～多次元の量子ビットの結果を見やすくする関数が3種類あります。いずれも結果リストから単一の結果を与えて使用します。
