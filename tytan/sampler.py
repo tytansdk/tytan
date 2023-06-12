@@ -1,123 +1,156 @@
 import numpy as np
+import numpy.random as nr
 import pandas as pd
+
+#共通前処理
+"""
+qmatrixはシンボル順ではなく適当に割り当てられたindex順であることに注意
+最後にindex_mapで復元する必要がある
+"""
+def get_matrix(qubo):
+    # 重複なしにシンボルを抽出
+    keys = list(set(key for keypair in qubo.keys() for key in keypair))
+    #print(keys)
+    
+    # 要素のソート（ただしアルファベットソート）
+    keys.sort()
+    #print(keys)
+    
+    # シンボルにindexを対応させる
+    index_map = {key:i for i, key in enumerate(keys)}
+    #print(index_map)
+    
+    # 上記のindexマップを利用してquboのkeyをindexで置き換え
+    qubo_index = {(index_map[key[0]], index_map[key[1]]): value for key, value in qubo.items()}
+    #print(qubo_index)
+
+    # matrixサイズ
+    N = len(keys)
+    #print(N)
+
+    # qmatrix初期化
+    qmatrix = np.zeros((N, N))
+    for (i, j), value in qubo_index.items():
+        qmatrix[i, j] = value
+    #print(qmatrix)
+    
+    return qmatrix, index_map, N
+
+
+#共通前処理
+"""
+pool=(shots, N), score=(N, )
+"""
+def get_result(pool, score, index_map):
+    #重複解を集計
+    unique_pool, original_index, unique_counts = np.unique(pool, axis=0, return_index=True, return_counts=True)
+    #print(unique_pool, original_index, unique_counts)
+    
+    #エネルギーもユニークに集計
+    unique_energy = score[original_index]
+    #print(unique_energy)
+    
+    #エネルギー低い順にソート
+    order = np.argsort(unique_energy)
+    unique_pool = unique_pool[order]
+    unique_energy = unique_energy[order]
+    unique_counts = unique_counts[order]
+    
+    #結果リスト
+    result = [[dict(zip(index_map.keys(), unique_pool[i])), unique_energy[i], unique_counts[i]] for i in range(len(unique_pool))]
+    #print(result)
+    
+    return result
+
+
+
 
 
 class SASampler:
     def __init__(self, seed=None):
-        # アニーリングステップ数（後ろに局所探索が入ることに注意）
-        # flip_count=1000, N=50, shots=100 -> 約１秒
-        self.flip_step = 1000
+        #乱数シード
         self.seed = seed
-
-    def run(self, qubo, shots):
-        # start = time.time()
-
-        # 重複なしに要素を抽出
-        keys = list(set(k for tup in qubo.keys() for k in tup))
-
-        # 要素のソート
-        keys.sort()
-
-        # 抽出した要素のindexマップを作成
-        index_map = {k: v for v, k in enumerate(keys)}
-
-        # 上記のindexマップを利用してタプルの内容をindexで書き換え
-        qubo_index = {(index_map[k[0]], index_map[k[1]]): v for k, v in qubo.items()}
-
-        # タプル内をソート
-        qubo_sorted = {
-            tuple(sorted(k)): v
-            for k, v in sorted(qubo_index.items(), key=lambda x: x[1])
-        }
-
-        # 量子ビット数
-        N = int(len(keys))
-
-        # QUBO matrix 初期化
-        qmatrix = np.zeros((N, N))
-        for (i, j), value in qubo_sorted.items():
-            qmatrix[i, j] = value
-
-        # df初期化
-        columns = keys.copy()
-        columns.append("energy")
-        df = pd.DataFrame(columns=columns)
-
-        # --- 高速疑似SA ---
+    
+    def run(self, qubo, shots=10, T_num=8000):
+        
+        #共通前処理
+        qmatrix, index_map, N = get_matrix(qubo)
+        #print(qmatrix)
+        
+        #シード固定
+        nr.seed(self.seed)
+        
+        #
+        shots = max(int(shots), 10)
+        
+        #アニーリングステップ数
+        #T_num = 5000
+        
+        # --- SA ---
+        
         # プール初期化
         pool_num = shots
-        np.random.seed(self.seed)
-        pool = np.random.randint(0, 2, (pool_num, N))
-        # 重複は振り直し
-        # パリエーションに余裕あれば確定非重複
-        if pool_num < 2 ** (N - 1):
-            # print('remake 1')
-            for i in range(pool_num - 1):
-                for j in range(i + 1, pool_num):
-                    while (pool[i] == pool[j]).all():
-                        pool[j] = np.random.randint(0, 2, N)
-        else:
-            # パリエーションに余裕なければ3トライ重複可
-            # print('remake 2')
-            for i in range(pool_num - 1):
-                for j in range(i + 1, pool_num):
-                    count = 0
-                    while (pool[i] == pool[j]).all():
-                        pool[j] = np.random.randint(0, 2, N)
-                        count += 1
-                        if count == 3:
-                            break
+        pool = nr.randint(0, 2, (pool_num, N))
+        #print(pool)
 
         # スコア初期化
         score = np.array([q @ qmatrix @ q for q in pool])
-
-        # フリップ数リスト（2個まで下がる）
-        flip = np.sort(np.random.rand(self.flip_step) ** 2)[::-1]
-        flip = (flip * max(0, N * 0.5 - 2)).astype(int) + 2
-        # print(flip)
-
-        # フリップマスクリスト
-        flip_mask = [[1] * flip[0] + [0] * (N - flip[0])]
-        for i in range(1, self.flip_step):
-            tmp = [1] * flip[i] + [0] * (N - flip[i])
-            np.random.shuffle(tmp)
-            # 前と重複なら振り直し
-            while tmp == flip_mask[-1]:
-                np.random.shuffle(tmp)
-            flip_mask.append(tmp)
-        flip_mask = np.array(flip_mask, bool)
-        # print(flip_mask.shape)
-
+        #print(score)
+        
+        #初期最大スコア差
+        score_range = abs(np.max(score) - np.min(score))
+        #print(score_range)
+        
+        #Tの下限
+        T_min = 1.0 / score_range
+        
+        #温度配列　T_num
+        #score_rangeが大きいほどT_minを小さくしないと終盤に落ち着かない
+        Ts = (np.linspace(1, 0, num=T_num)**2) * (1 - T_min) + T_min
+        #print(Ts)
+        
+        #フリップマスク　T_num, pool_num, N
+        flip_mask = np.zeros((T_num*pool_num, N), bool)
+        flip_mask[:, 0] = True
+        flip_mask[:len(flip_mask)//2, 1] = True
+        flip_mask = nr.default_rng().permuted(flip_mask, axis=1) #横シャッフル
+        flip_mask = flip_mask.reshape(T_num, pool_num, N)
+        #print(flip_mask.shape)
+        
+        #アニーリング
+        for i, T in enumerate(Ts):
+            #print(i, T)
+            
+            #フリップしたプール　pool_num, N
+            pool_new = np.where(flip_mask[i], 1 - pool, pool)
+            #print(pool_new)
+            
+            #スコア計算　pool_num
+            score_new = np.array([q @ qmatrix @ q for q in pool_new])
+            #print(score)
+            #print(score_new)
+            
+            #採択確率　pool_num
+            #np.abs(score_new - score) / score_range　-> 0～1　だが実際には 0～0.2　くらい
+            #np.abs(score_new - score) / score_range / T　-> 0～5　とする
+            #T -> 1～0.04
+            #print(np.abs(score_new - score))
+            Ps = 2.71828**(- np.abs(score_new - score) / score_range / T)
+            #print(Ps)
+            
+            #更新
+            update_mask = (score_new < score) + (nr.rand(pool_num) < Ps)
+            #print(update_mask)
+            pool[update_mask] = pool_new[update_mask]
+            score[update_mask] = score_new[update_mask]
+            
+            # 進行表示1
+            if i % 200 == 0:
+                print("-", end="")
+        print()
+        
         # 局所探索フリップマスクリスト
-        single_flip_mask = np.zeros((N, N), bool)
-        for i in range(N):
-            single_flip_mask[i, i] = True
-        # print(single_flip_mask.shape)
-
-        # end = time.time()
-        # print('{}s'.format(round(end - start, 4)))
-
-        # アニーリング
-        # 集団まるごと温度を下げる
-
-        # start = time.time()
-
-        for fm in flip_mask:
-            # フリップ後
-            pool2 = np.where(fm, 1 - pool, pool)
-            score2 = np.array([q @ qmatrix @ q for q in pool2])
-
-            # 更新マスク
-            update_mask = score2 < score
-
-            # 更新
-            pool[update_mask] = pool2[update_mask]
-            score[update_mask] = score2[update_mask]
-
-        # end = time.time()
-        # print('{}s'.format(round(end - start, 4)))
-
-        # start = time.time()
+        single_flip_mask = np.eye(N, dtype=bool)
 
         # 最後に1フリップ局所探索
         # 集団まるごと
@@ -132,181 +165,70 @@ class SASampler:
             # 更新
             pool[update_mask] = pool2[update_mask]
             score[update_mask] = score2[update_mask]
-
-        # end = time.time()
-        # print('{}s'.format(round(end - start, 4)))
-
-        # 後処理1
-        expand = np.hstack((pool, score.reshape(pool_num, 1)))
-        df = pd.DataFrame(expand, columns=df.columns)
+        
         # ----------
-
-        # 後処理2
-        grouped = df.groupby(list(df.columns))
-        counts = grouped.size().reset_index(name="occerrence")
-        counts = counts.sort_values("energy").reset_index(drop=True)
-        dict_data = counts.iloc[:, 0:-2].to_dict(orient="records")
-        result_dict = [
-            [dict_data[index], row["energy"], int(row["occerrence"])]
-            for index, row in counts.iterrows()
-        ]
-
-        return result_dict
+        #共通後処理
+        result = get_result(pool, score, index_map)
+        
+        return result
 
 
 class GASampler:
     def __init__(self, seed=None):
         self.max_gen = 1000000
-        self.max_count = 2
+        self.max_count = 3
         self.seed = seed
 
-    def run(self, qubo, shots):
-        # 重複なしに要素を抽出
-        keys = list(set(k for tup in qubo.keys() for k in tup))
-
-        # 要素のソート
-        keys.sort()
-
-        # 抽出した要素のindexマップを作成
-        index_map = {k: v for v, k in enumerate(keys)}
-
-        # 上記のindexマップを利用してタプルの内容をindexで書き換え
-        qubo_index = {(index_map[k[0]], index_map[k[1]]): v for k, v in qubo.items()}
-
-        # タプル内をソート
-        qubo_sorted = {
-            tuple(sorted(k)): v
-            for k, v in sorted(qubo_index.items(), key=lambda x: x[1])
-        }
-
-        # 量子ビット数
-        N = int(len(keys))
-
-        # QUBO matrix 初期化
-        qmatrix = np.zeros((N, N))
-        for (i, j), value in qubo_sorted.items():
-            qmatrix[i, j] = value
-
-        # df初期化
-        columns = keys.copy()
-        columns.append("energy")
-        df = pd.DataFrame(columns=columns)
+    def run(self, qubo, shots=200):
+        #共通前処理
+        qmatrix, index_map, N = get_matrix(qubo)
+        #print(qmatrix)
+        
+        #シード固定
+        nr.seed(self.seed)
+        
+        #
+        shots = max(int(shots), 200)
 
         # --- GA ---
+        
         # プール初期化
-        pool_num = max(shots, 2)  # N * 10
-        np.random.seed(self.seed)
-        pool = np.random.randint(0, 2, (pool_num, N))
+        pool_num = shots
+        pool = nr.randint(0, 2, (pool_num, N))
+        
         # スコア初期化
         score = np.array([q @ qmatrix @ q for q in pool])
 
         # 進化
-        last_mean_score = 99999
         best_score = np.copy(score)
         count = 0
         sw = True
-
         for gen in range(1, self.max_gen + 1):
             # 親
             parent_id = np.random.choice(range(pool_num), 2, replace=False)
             parent = pool[parent_id]
 
-            if N > 2:
-                # 交叉点
-                cross_point = np.sort(np.random.choice(range(1, N), 2, replace=False))
+            if N > 1:
+                # 交換マスク
+                mask = nr.randint(0, 2, N)
                 # 家族
-                c = np.array(
-                    [
-                        parent[0],
-                        parent[1],
-                        np.hstack(
-                            (
-                                parent[0, : cross_point[0]],
-                                parent[0, cross_point[0] : cross_point[1]],
-                                parent[1, cross_point[1] :],
-                            )
-                        ),
-                        np.hstack(
-                            (
-                                parent[0, : cross_point[0]],
-                                parent[1, cross_point[0] : cross_point[1]],
-                                parent[0, cross_point[1] :],
-                            )
-                        ),
-                        np.hstack(
-                            (
-                                parent[0, : cross_point[0]],
-                                parent[1, cross_point[0] : cross_point[1]],
-                                parent[1, cross_point[1] :],
-                            )
-                        ),
-                        np.hstack(
-                            (
-                                parent[1, : cross_point[0]],
-                                parent[0, cross_point[0] : cross_point[1]],
-                                parent[0, cross_point[1] :],
-                            )
-                        ),
-                        np.hstack(
-                            (
-                                parent[1, : cross_point[0]],
-                                parent[0, cross_point[0] : cross_point[1]],
-                                parent[1, cross_point[1] :],
-                            )
-                        ),
-                        np.hstack(
-                            (
-                                parent[1, : cross_point[0]],
-                                parent[1, cross_point[0] : cross_point[1]],
-                                parent[0, cross_point[1] :],
-                            )
-                        ),
-                    ]
-                )
-                # 評価
-                s = np.array(
-                    [
-                        c[0] @ qmatrix @ c[0],
-                        c[1] @ qmatrix @ c[1],
-                        c[2] @ qmatrix @ c[2],
-                        c[3] @ qmatrix @ c[3],
-                        c[4] @ qmatrix @ c[4],
-                        c[5] @ qmatrix @ c[5],
-                    ]
-                )
-
-            elif N == 2:
-                # 家族
-                c = np.array(
-                    [
-                        parent[0],
-                        parent[1],
-                        [parent[0, 0], parent[1, 1]],
-                        [parent[0, 1], parent[1, 0]],
-                    ]
-                )
-                # 評価
-                s = np.array(
-                    [
-                        c[0] @ qmatrix @ c[0],
-                        c[1] @ qmatrix @ c[1],
-                        c[2] @ qmatrix @ c[2],
-                        c[3] @ qmatrix @ c[3],
-                    ]
-                )
-
+                c = np.array([parent[0],
+                              parent[1],
+                              np.where(mask, parent[0], parent[1]),
+                              np.where(mask, parent[1], parent[0])
+                              ])
             elif N == 1:
                 # 家族
-                c = np.array([parent[0], parent[1], 1 - parent[0], 1 - parent[1]])
-                # 評価
-                s = np.array(
-                    [
-                        c[0] @ qmatrix @ c[0],
-                        c[1] @ qmatrix @ c[1],
-                        c[2] @ qmatrix @ c[2],
-                        c[3] @ qmatrix @ c[3],
-                    ]
-                )
+                c = np.array([parent[0],
+                              parent[1],
+                              1 - parent[0],
+                              1 - parent[1]])
+            # 評価
+            s = np.array([c[0] @ qmatrix @ c[0],
+                          c[1] @ qmatrix @ c[1],
+                          c[2] @ qmatrix @ c[2],
+                          c[3] @ qmatrix @ c[3]
+                          ])
 
             # エリート選択
             select_id = np.argsort(s)[:2]
@@ -334,22 +256,11 @@ class GASampler:
             print()
         print("Automatic end at gen {}/{}".format(gen, self.max_gen))
 
-        # 後処理1
-        expand = np.hstack((pool, score.reshape(pool_num, 1)))
-        df = pd.DataFrame(expand, columns=df.columns)
         # ----------
-
-        # 後処理2
-        grouped = df.groupby(list(df.columns))
-        counts = grouped.size().reset_index(name="occerrence")
-        counts = counts.sort_values("energy").reset_index(drop=True)
-        dict_data = counts.iloc[:, 0:-2].to_dict(orient="records")
-        result_dict = [
-            [dict_data[index], row["energy"], int(row["occerrence"])]
-            for index, row in counts.iterrows()
-        ]
-
-        return result_dict
+        #共通後処理
+        result = get_result(pool, score, index_map)
+        
+        return result
 
 
 class ZekeSampler:
@@ -710,3 +621,11 @@ class NQSLocalSampler:
         z_file = zipfile.ZipFile("/tmp/{}".format(filename), "w")
         z_file.writestr("qubo_w.csv", qubo, zipfile.ZIP_DEFLATED)
         z_file.close()
+
+
+
+
+
+
+
+
