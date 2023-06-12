@@ -1,9 +1,10 @@
-import sympy as sym
 import pytest
 from tests.support.custom_stub import make_vcr_request
-from tytan import qubo
+from tytan import symbols, Compile
 from tytan.sampler import NQSLocalSampler
 import vcr.stubs.httpx_stubs
+
+
 
 
 @pytest.mark.vcr(
@@ -13,11 +14,11 @@ import vcr.stubs.httpx_stubs
     ),
 )
 def test_nqs_local_sampler_run():
-    x, y, z = sym.symbols("x y z")
+    x, y, z = symbols("x y z")
     expr = 3 * x**2 + 2 * x * y + 4 * y**2 + z**2 + 2 * x * z + 2 * y * z
-    Q, _offset = qubo.Compile(expr).get_qubo()
+    qubo, offset = Compile(expr).get_qubo()
     sampler = NQSLocalSampler()
-    result = sampler.run(qubo=Q)
+    result = sampler.run(qubo)
     assert result is not None
     assert result["result"] is not None
     assert result["result"]["x"] == 0

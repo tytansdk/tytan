@@ -1,9 +1,8 @@
 import os
 import pytest
-import sympy as sym
 import vcr.stubs.httpx_stubs
 from tests.support.custom_stub import make_vcr_request
-from tytan import qubo
+from tytan import symbols, Compile
 from tytan.sampler import NQSSampler
 
 
@@ -15,12 +14,12 @@ from tytan.sampler import NQSSampler
     ),
 )
 def test_nqs_sampler_run():
-    x, y, z = sym.symbols("x y z")
+    x, y, z = symbols("x y z")
     expr = 3 * x**2 + 2 * x * y + 4 * y**2 + z**2 + 2 * x * z + 2 * y * z
-    Q, _offset = qubo.Compile(expr).get_qubo()
+    qubo, offset = Compile(expr).get_qubo()
     api_key = os.environ.get("TYTAN_API_KEY", "foobar")
     sampler = NQSSampler(api_key)
-    result = sampler.run(qubo=Q)
+    result = sampler.run(qubo)
     assert result is not None
     assert result["result"] is not None
     assert result["result"]["x"] == 0
