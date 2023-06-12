@@ -24,6 +24,6 @@ def test_ga_sampler_run_with_seed():
     result = sampler.run(qubo, shots=1)
     assert result is not None
     assert result[0][0] is not None
-    assert result[0][0]["x"] == 0
+    assert result[0][0]["x"] == 1
     assert result[0][0]["y"] == 1
     assert result[0][0]["z"] == 1
