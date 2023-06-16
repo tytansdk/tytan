@@ -1,6 +1,8 @@
 # 最新情報
 
-2023/06/17 requirements.txtが軽くなりました。N-bit表現を扱うsymbols_nbit, Auto_array.get_nbit_value関数が追加されました。
+2023/06/17 N-bit表現を扱うsymbols_nbit, Auto_array.get_nbit_value関数が追加されました。
+
+2023/06/17 requirements.txtが軽くなりました。
 
 2023/06/12 SASampler, GASamplerの性能が上がりました（ウソかも）
 
