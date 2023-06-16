@@ -1,5 +1,8 @@
 # 最新情報
-2023/06/12 SASampler, GASamplerの性能が上がりました
+
+2023/06/17 requirements.txtが軽くなりました。N-bit表現を扱うsymbols_nbit, Auto_array.get_nbit_value関数が追加されました。
+
+2023/06/12 SASampler, GASamplerの性能が上がりました（ウソかも）
 
 2023/06/10 便利なsymbols_list, symbols_define関数が追加されました。[ドキュメント](https://github.com/tytansdk/tytan/blob/main/document%20.md) が作成されました。
 
@@ -169,6 +172,8 @@ TYTANは商用利用前提ですので、個人での利用はもちろん企業
 ## 更新履歴
 |日付|内容|
 |:---|:---|
+|2023/06/17|symbols_nbit, Auto_array.get_nbit_value追加|
+|2023/06/17|requirements.txt修正|
 |2023/06/12|SASampler性能UP, GASampler性能UP|
 |2023/06/10|symbols_list, symbols_define追加、ドキュメント作成|
 |2023/06/07|Auto_array追加|
