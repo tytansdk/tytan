@@ -2,6 +2,7 @@ import re
 import itertools
 import numpy as np
 import pandas as pd
+from sympy import Symbol as sympy_Symbol
 
 """
 量子ビットの添字を検出して結果を多次元配列に変換して返す
@@ -166,17 +167,21 @@ class Auto_array:
         
         
         return image, subs
+    
+    #ｎbitを解析して値を得る
+    def get_nbit_value(self, expr):
         
+        #nbit式中のシンボル抽出
+        symbols = list(expr.atoms(sympy_Symbol))
+        #print(symbols)
         
+        #nbit式中のシンボルに結果を戻す
+        tmp = [(symbols[i], self.a[f'{symbols[i]}']) for i in range(len(symbols))]
+        ans = expr.subs(tmp)
         
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
+        #余計な少数0をなくして返す
+        return float(ans)
+
+
+
     

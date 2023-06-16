@@ -175,4 +175,15 @@ def symbols_define(shape, format_txt=None):
     # print(f'defined global : {first_command} to {final_command}')
 
 
+def symbols_nbit(start, stop, format_txt, num=8):
+    #生成
+    q = symbols_list(num, format_txt=format_txt)
+    
+    #式
+    ret = 0
+    for n in range(num):
+        #係数を規格化してから量子ビットをかけたい
+        ret += (start + (stop - start)) * 2**(num - n - 1) / 2**num * q[n]
+    
+    return ret
 
