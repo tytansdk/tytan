@@ -242,12 +242,14 @@ solver = sampler.SASampler()
 result = solver.run(qubo, shots=10)
 
 #１つ目の解をNビット表現から数値に戻して確認
+print(result[0])
 print('x =', Auto_array(result[0]).get_nbit_value(x))
 print('y =', Auto_array(result[0]).get_nbit_value(y))
 print('z =', Auto_array(result[0]).get_nbit_value(z))
 ```
 ```
 128.0*x0 + 64.0*x1 + 32.0*x2 + 16.0*x3 + 8.0*x4 + 4.0*x5 + 2.0*x6 + 1.0*x7
+[{'x0': 0, 'x1': 1, 'x2': 1, 'x3': 1, 'x4': 1, 'x5': 1, 'x6': 0, 'x7': 1, 'y0': 1, 'y1': 1, 'y2': 1, 'y3': 0, 'y4': 0, 'y5': 1, 'y6': 1, 'y7': 1, 'z0': 1, 'z1': 0, 'z2': 1, 'z3': 0, 'z4': 0, 'z5': 0, 'z6': 0, 'z7': 1}, -49676651.0, 1]
 x = 130.0
 y = 230.0
 z = 150.0
