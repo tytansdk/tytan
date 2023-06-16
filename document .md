@@ -12,7 +12,7 @@ pip install -U tytan
 ## import
 コードの冒頭ですべての機能をインポートしておくことを推奨します。
 ```python
-from tytan import symbols, symbols_list, symbols_define, Compile, sampler, Auto_array
+from tytan import symbols, symbols_list, symbols_define, symbols_nbit, Compile, sampler, Auto_array
 ```
 または
 ```python
@@ -134,7 +134,7 @@ for r in result:
 
 また、1次元～多次元の量子ビットの結果を見やすくする関数が3種類あります。いずれも結果リストから単一の結果を与えて使用します。
 
-ndarray形式の配列に変換する方法は次のとおりです。1次元～5次元まで対応。1次元の場合でもこの関数を通すことでシンボルが自然順ソートされ、q11はq2より後に来るようになる。
+ndarray形式の配列に変換する方法は次のとおりです。1次元～5次元まで対応。1次元の場合でもこの関数を通すことでシンボルが自然順ソートされ、q11はq2より後に来るようになる（便利）。
 ```python
 arr, subs = Auto_array(result[0]).get_ndarray('q{}_{}')
 print(arr)
@@ -212,3 +212,43 @@ qubo, offset = Compile(matrix).get_qubo()
 2  0  0 -3
 ```
 
+
+## N-bitの変数を扱う方法
+量子ビット（文字シンボル）はそのままでは0と1しか取り得ないため、幅広く整数や少数を表現するには複数の量子ビットを使ったN-bit表現を行う。例えば8-bitを使用して0から255までの整数を表現できる。これを簡単に扱うためのsymbols_nbit()関数とAuto_array().get_nbit_value()関数が用意されている。
+
+例えば以下の連立方程式を解く場合、x, y, zとも0～255の整数であることが既知として、それぞれ8-bit表現して解くことができる。
+10x+14y+4z = 5120<br>
+9x+12y+2z = 4230<br>
+7x+5y+2z = 2360
+
+```python
+#量子ビットをNビット表現で用意する
+x = symbols_nbit(0, 256, 'x{}', num=8)
+print(x)
+y = symbols_nbit(0, 256, 'y{}', num=8)
+z = symbols_nbit(0, 256, 'z{}', num=8)
+
+#連立方程式の設定
+H = 0
+H += (10*x +14*y +4*z - 5120)**2
+H += ( 9*x +12*y +2*z - 4230)**2
+H += ( 7*x + 5*y +2*z - 2360)**2
+
+#コンパイル
+qubo, offset = Compile(H).get_qubo()
+#サンプラー選択
+solver = sampler.SASampler()
+#サンプリング
+result = solver.run(qubo, shots=10)
+
+#１つ目の解をNビット表現から数値に戻して確認
+print('x =', Auto_array(result[0]).get_nbit_value(x))
+print('y =', Auto_array(result[0]).get_nbit_value(y))
+print('z =', Auto_array(result[0]).get_nbit_value(z))
+```
+```
+128.0*x0 + 64.0*x1 + 32.0*x2 + 16.0*x3 + 8.0*x4 + 4.0*x5 + 2.0*x6 + 1.0*x7
+x = 130.0
+y = 230.0
+z = 150.0
+```
