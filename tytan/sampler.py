@@ -113,7 +113,7 @@ class SASampler:
         flip_mask = np.zeros((T_num*pool_num, N), bool)
         flip_mask[:, 0] = True
         flip_mask[:len(flip_mask)//2, 1] = True
-        flip_mask = nr.default_rng((seed=self.seed).permuted(flip_mask, axis=1) #横シャッフル
+        flip_mask = nr.default_rng(seed=self.seed).permuted(flip_mask, axis=1) #横シャッフル
         flip_mask = flip_mask.reshape(T_num, pool_num, N)
         #print(flip_mask.shape)
         
