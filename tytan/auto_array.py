@@ -40,16 +40,19 @@ class Auto_array:
         
         a = self.a
         
-        #キー抽出
+        #全キー抽出
         keys = np.array(list(a.keys()))
         #print(keys)
         
         #フォーマット準備
         f = format_txt.replace('{}', '(.*)')
         #print(f)
-        
+
         #フォーマットに従って添字抽出
-        subs = np.array([re.findall(f, key) for key in keys])
+        subs = [re.findall(f, key) for key in keys] #アンマッチは[]になっている
+        subs = [sub for sub in subs if sub != []] #[]を削除
+        subs = np.array(subs)
+        #subs = np.array([re.findall(f, key) for key in keys])
         subs = np.squeeze(subs)
         if len(subs.shape) == 1:
             subs = subs[:, np.newaxis]
