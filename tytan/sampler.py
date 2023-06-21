@@ -191,7 +191,7 @@ class SASampler:
         アニーリング＋1フリップ
         """
         pool, score = anneal(pool, score, qmatrix, flip_mask, single_flip_mask)
-        
+        pool = pool.astype(int)
         # ----------
         #共通後処理
         result = get_result(pool, score, index_map)
