@@ -79,7 +79,7 @@ q2_2 = symbols('q2_2')
 [Discord「TYTAN」](https://discord.gg/qT5etstPW8)
 
 ## サンプリング
-数式をコンパイルしてサンプリングする手続きはほぼこのままです。Hの部分が数式。サンプリングの乱数シードは固定可。サンプリング回数（shots）は適宜変更してください。
+数式をコンパイルしてサンプリングする手続きはほぼこのままです。Hの部分が数式。サンプリングの乱数シードは固定可。サンプリング回数（shots）はデフォルトが100なので適宜変更してください。
 ```python
 #コンパイル
 qubo, offset = Compile(H).get_qubo()
@@ -88,7 +88,7 @@ qubo, offset = Compile(H).get_qubo()
 solver = sampler.SASampler(seed=None)
 
 #サンプリング
-result = solver.run(qubo, shots=10)
+result = solver.run(qubo, shots=100)
 ```
 
 ▼サンプラー一覧<br>
@@ -96,12 +96,12 @@ result = solver.run(qubo, shots=10)
 ```python
 #SAサンプラー
 solver = sampler.SASampler(seed=None)
-result = solver.run(qubo, shots=10)
+result = solver.run(qubo, shots=100)
 ```
 ```python
 #GAサンプラー
 solver = sampler.GASampler(seed=None)
-result = solver.run(qubo, shots=200)
+result = solver.run(qubo, shots=100)
 ```
 商用クラウドサンプラー：1,000-100,000量子ビット程度　※要詳細
 ```python
@@ -116,9 +116,9 @@ for r in result:
     print(r)
 ```
 ```
-[{'x': 0, 'y': 1, 'z': 1}, -4.0, 2]
-[{'x': 1, 'y': 0, 'z': 1}, -4.0, 4]
-[{'x': 1, 'y': 1, 'z': 0}, -4.0, 4]
+[{'x': 0, 'y': 1, 'z': 1}, -4.0, 27]
+[{'x': 1, 'y': 0, 'z': 1}, -4.0, 23]
+[{'x': 1, 'y': 1, 'z': 0}, -4.0, 50]
 ```
 
 0, 1のみを取り出す場合は次の通りだが、シンボルがアルファベット順のためq11がq2より手前に来たりすることに注意！（後述の方法でシンボルの自然順ソートが可能）
@@ -239,7 +239,7 @@ qubo, offset = Compile(H).get_qubo()
 #サンプラー選択
 solver = sampler.SASampler()
 #サンプリング
-result = solver.run(qubo, shots=10)
+result = solver.run(qubo, shots=500)
 
 #１つ目の解をNビット表現から数値に戻して確認
 print(result[0])
@@ -249,7 +249,7 @@ print('z =', Auto_array(result[0]).get_nbit_value(z))
 ```
 ```
 128.0*x0 + 64.0*x1 + 32.0*x2 + 16.0*x3 + 8.0*x4 + 4.0*x5 + 2.0*x6 + 1.0*x7
-[{'x0': 0, 'x1': 1, 'x2': 1, 'x3': 1, 'x4': 1, 'x5': 1, 'x6': 0, 'x7': 1, 'y0': 1, 'y1': 1, 'y2': 1, 'y3': 0, 'y4': 0, 'y5': 1, 'y6': 1, 'y7': 1, 'z0': 1, 'z1': 0, 'z2': 1, 'z3': 0, 'z4': 0, 'z5': 0, 'z6': 0, 'z7': 1}, -49676651.0, 1]
+[{'x0': 1, 'x1': 0, 'x2': 0, 'x3': 0, 'x4': 0, 'x5': 0, 'x6': 1, 'x7': 0, 'y0': 1, 'y1': 1, 'y2': 1, 'y3': 0, 'y4': 0, 'y5': 1, 'y6': 1, 'y7': 0, 'z0': 1, 'z1': 0, 'z2': 0, 'z3': 1, 'z4': 0, 'z5': 1, 'z6': 1, 'z7': 0}, -49676900.0, 2]
 x = 130.0
 y = 230.0
 z = 150.0
