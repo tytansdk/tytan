@@ -173,14 +173,17 @@ class SASampler:
 
         # フリップマスクリスト
         flip_mask = [[1] * flip[0] + [0] * (N - flip[0])]
-        for i in range(1, T_num):
-            tmp = [1] * flip[i] + [0] * (N - flip[i])
-            nr.shuffle(tmp)
-            # 前と重複なら振り直し
-            while tmp == flip_mask[-1]:
+        if N <= 2:
+            flip_mask = np.ones((T_num, N), int)
+        else:
+            for i in range(1, T_num):
+                tmp = [1] * flip[i] + [0] * (N - flip[i])
                 nr.shuffle(tmp)
-            flip_mask.append(tmp)
-        flip_mask = np.array(flip_mask, bool)
+                # 前と重複なら振り直し
+                while tmp == flip_mask[-1]:
+                    nr.shuffle(tmp)
+                flip_mask.append(tmp)
+            flip_mask = np.array(flip_mask, bool)
         #print(flip_mask.shape)
 
         # 局所探索フリップマスクリスト
