@@ -14,7 +14,7 @@ class Compile:
         Returns:
             Tuple: qubo is dict. offset is float.
         """
-
+        
         #sympy型のサブクラス
         if 'sympy.core' in str(type(self.expr)):
             #式を展開して同類項をまとめる
@@ -26,11 +26,16 @@ class Compile:
             #もう一度同類項をまとめる
             expr = sympy.expand(expr)
             
-            #定数項をoffsetとして抽出
-            offset = expr.as_ordered_terms()[-1] #定数項は一番最後 #もう少し高速化できる？
-            #定数項がなければ0
-            if '*' in str(offset):
-                offset = 0
+            #定数項をoffsetとして抽出 #定数項は一番最後 #もう少し高速化できる？
+            # offset = expr.as_ordered_terms()[-1] #定数項は一番最後 #もう少し高速化できる？
+            # #定数項がなければ0
+            # if '*' in str(offset):
+            #     offset = 0
+            offset = 0
+            for ex in expr.as_ordered_terms()[::-1]:
+                if 'numbers.One' in str(type(ex)):
+                    offset = ex
+                    break
             
             #offsetを引いて消す
             expr2 = expr - offset
@@ -44,7 +49,7 @@ class Compile:
                 tmp = str(key).split('*')
                 #tmp = ['q0'], ['q0', 'q1']のどちらかになっていることを利用
                 qubo[(tmp[0], tmp[-1])] = float(value)
-
+                
             return qubo, offset
 
         # numpy

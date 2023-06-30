@@ -68,7 +68,11 @@ SASampler
 poolの重複を解除する関数
 """
 @jit(nopython=True, cache=True)
-def variation(pool, pool_num, N):
+def variation(pool, pool_num, N, seed_in_jit):
+    #シード固定
+    if seed_in_jit != None:
+        np.random.seed(seed_in_jit) #Noneではエラーになるので数字のときだけ
+    
     # 重複は振り直し
     # パリエーションに余裕あれば確定非重複
     if pool_num < 2 ** (N - 1):
@@ -161,28 +165,31 @@ class SASampler:
         SASampler
         poolの重複を解除する関数
         """
-        pool = variation(pool, pool_num, N)
+        pool = variation(pool, pool_num, N, self.seed)
         
         # スコア初期化
         score = np.sum((pool @ qmatrix) * pool, axis=1)
 
         # フリップ数リスト（2個まで下がる）
-        flip = np.sort(np.random.rand(T_num) ** 2)[::-1]
+        flip = np.sort(nr.rand(T_num) ** 2)[::-1]
         flip = (flip * max(0, N * 0.5 - 2)).astype(int) + 2
         #print(flip)
-
+        
         # フリップマスクリスト
         flip_mask = [[1] * flip[0] + [0] * (N - flip[0])]
-        for i in range(1, T_num):
-            tmp = [1] * flip[i] + [0] * (N - flip[i])
-            nr.shuffle(tmp)
-            # 前と重複なら振り直し
-            while tmp == flip_mask[-1]:
+        if N <= 2:
+            flip_mask = np.ones((T_num, N), int)
+        else:
+            for i in range(1, T_num):
+                tmp = [1] * flip[i] + [0] * (N - flip[i])
                 nr.shuffle(tmp)
-            flip_mask.append(tmp)
-        flip_mask = np.array(flip_mask, bool)
+                # 前と重複なら振り直し
+                while tmp == flip_mask[-1]:
+                    nr.shuffle(tmp)
+                flip_mask.append(tmp)
+            flip_mask = np.array(flip_mask, bool)
         #print(flip_mask.shape)
-
+        
         # 局所探索フリップマスクリスト
         single_flip_mask = np.eye(N, dtype=bool)
         
@@ -192,6 +199,7 @@ class SASampler:
         """
         pool, score = anneal(pool, score, qmatrix, flip_mask, single_flip_mask)
         pool = pool.astype(int)
+        
         # ----------
         #共通後処理
         result = get_result(pool, score, index_map)
