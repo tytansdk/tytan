@@ -33,7 +33,7 @@ class Compile:
             #     offset = 0
             offset = 0
             for ex in expr.as_ordered_terms()[::-1]:
-                if 'numbers.One' in str(type(ex)):
+                if 'numbers.' in str(type(ex)):
                     offset = ex
                     break
             
