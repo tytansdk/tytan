@@ -173,6 +173,7 @@ TYTANは商用利用前提ですので、個人での利用はもちろん企業
 ## 更新履歴
 |日付|内容|
 |:---|:---|
+|2023/07/01|Compile修正, requirements.txt修正|
 |2023/06/21|Auto_array修正, SASampler性能UP|
 |2023/06/17|symbols_nbit, Auto_array.get_nbit_value追加|
 |2023/06/17|requirements.txt修正|
