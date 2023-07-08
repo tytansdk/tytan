@@ -64,25 +64,6 @@ def get_result(pool, score, index_map):
     
     return result
 
-#control_sampler用
-def get_result_short(pool, score):
-    #重複解を集計
-    unique_pool, original_index, unique_counts = np.unique(pool, axis=0, return_index=True, return_counts=True)
-    #print(unique_pool, original_index, unique_counts)
-    
-    #エネルギーもユニークに集計
-    unique_energy = score[original_index]
-    #print(unique_energy)
-    
-    #エネルギー低い順にソート
-    order = np.argsort(unique_energy)
-    unique_pool = unique_pool[order]
-    unique_energy = unique_energy[order]
-    unique_counts = unique_counts[order]
-    
-    return unique_pool, unique_energy, unique_counts
-
-
 """
 SASampler用
 poolの重複を解除する関数
@@ -294,10 +275,7 @@ class SASampler_countup:
             score = np.sum((pool @ qmatrix) * pool, axis=1)
         
         # ----------
-        #後処理（短い版）
-        #unique_pool, unique_energy, unique_counts = get_result_short(pool, score)
         
-        #return unique_pool, unique_energy, unique_counts
         return pool, score
     
     def run(self, qubo, shots=100, T_num=2000, show=False):
