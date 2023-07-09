@@ -254,3 +254,57 @@ x = 130.0
 y = 230.0
 z = 150.0
 ```
+
+
+## 解を網羅的に探索するオプション
+使う人がいるか分からないが、複数の最適解を全部探索し尽くしたい場合のオプションを用意。
+
+例えば1～5の数字を一列に並べるパターンは5!=120通りあるが、通常はすべての解を得るまでに多くのサンプリング数を必要とする。
+```python
+#量子ビットを用意する
+q = symbols_list([5, 5], 'q{}_{}')
+
+H = 0
+#各スロットには数字が一つだけ入る（ワンホット）
+for i in range(5):
+    tmp = 0
+    for k in range(5):
+        tmp += q[i, k]
+    H += (tmp - 1)**2
+
+#各数字は一つのスロットに入る（ワンホット）
+for k in range(5):
+    tmp = 0
+    for i in range(5):
+        tmp += q[i, k]
+    H += (tmp - 1)**2
+
+#コンパイル
+qubo, offset = Compile(H).get_qubo()
+
+#サンプラー選択
+solver = sampler.SASampler()
+
+#サンプリング
+result = solver.run(qubo, shots=500)
+
+#最適解の種類をカウント
+count = 0
+for r in result:
+    if r[1] == -offset:
+        count += 1
+print(count)
+```
+```
+117
+```
+サンプリング数500では117種しか得られなかった。
+
+そこで、次のオプションで解のバリエーションを優先したサンプリングが可能。ただし問題の規模が大きい場合は実行速度が遅い。
+```python
+result = solver.run(qubo, shots=500, countup=True) #show=Trueで進捗確認
+```
+```
+120
+```
+120種類の解が得られた。
