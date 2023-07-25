@@ -1,4 +1,4 @@
-# 最新情報
+## 最新情報
 
 2023/06/21 Auto_array関数をより使いやすく。SASamplerの性能も上げました（たぶん本当）
 
@@ -11,7 +11,7 @@
 2023/06/10 便利なsymbols_list, symbols_define関数が追加されました。[ドキュメント](https://github.com/tytansdk/tytan/blob/main/document%20.md) が作成されました。
 
 
-# TYTAN（タイタン）
+## TYTAN（タイタン）
 大規模QUBOアニーリングのためのSDKです。
 
 QUBOを共通の入力形式とし、複数のサンプラーから選んでアニーリングできます。
@@ -187,5 +187,5 @@ TYTANは商用利用前提ですので、個人での利用はもちろん企業
 |2023/03/22|GASampler追加|
 |2023/03/15|初期版|
 
-# コントリビューター
-https://github.com/tytansdk/tytan/graphs/contributors
+## 運営協力
+<a href="https://vigne-cla.com/" target="_blank"><img src="https://github.com/tytansdk/tytan/blob/main/img/logo_vc_f_sk.png" width="150"></a>
