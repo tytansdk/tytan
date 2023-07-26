@@ -446,8 +446,11 @@ class GASampler:
 
 
 class ZekeSampler:
-    def __init__(self):
+    from typing import Dict, Optional
+    
+    def __init__(self, api_key: Optional[str] = None):
         self.API_ENDPOINT = "https://tytan-api.blueqat.com/v1/"
+        self.__api_key = api_key
         return
     
     def post_request(self, path, body, api_key):
@@ -479,7 +482,7 @@ class ZekeSampler:
         path = "tasks/create"
         return self.post_request(path, body, api_key)
     
-    def run(self, qubo, shots, api_key):
+    def run(self, qubo, shots=100, api_key: Optional[str] = None):
         # 重複なしに要素を抽出
         keys = list(set(k for tup in qubo.keys() for k in tup))
         # print(keys)
@@ -553,7 +556,8 @@ class ZekeSampler:
             "shots": shots,
         }
         
-        result = self.create_task(data, api_key)
+        key = self.__api_key if api_key is None else api_key
+        result = self.create_task(data, key)
         # print(result)
         
         # エネルギーを取り出し
@@ -613,38 +617,18 @@ class NQSSampler:
         import os
         import csv
         import io
-
-        # 重複なしに要素を抽出
-        keys = list(set(k for tup in qubo.keys() for k in tup))
-        # print(keys)
-
-        # 抽出した要素のindexマップを作成
-        index_map = {k: v for v, k in enumerate(keys)}
-        # print(index_map)
-
-        # 上記のindexマップを利用してタプルの内容をindexで書き換え
-        qubo_index = {(index_map[k[0]], index_map[k[1]]): v for k, v in qubo.items()}
-        # print(qubo_index)
-
-        # タプル内をソート
-        qubo_sorted = {
-            tuple(sorted(k)): v
-            for k, v in sorted(qubo_index.items(), key=lambda x: x[1])
-        }
-        # print(qubo_sorted)
-
-        # 量子ビット数
-        N = int(len(keys))
-
-        # QUBO matrix 初期化
-        qmatrix = np.zeros((N, N), dtype=object)
-
-        for (i, j), value in qubo_sorted.items():
-            qmatrix[i, j] = value
-
-        qmatrix = np.insert(qmatrix, 0, keys, axis=1)
-        qmatrix = np.vstack([[""] + keys[:], qmatrix])
-
+        import zipfile
+        
+        #共通前処理
+        qmatrix, index_map, N = get_matrix(qubo)
+        # print(qmatrix)
+        
+        #1行目、1列目にビット名を合体
+        tmp = np.zeros((len(qmatrix)+1, len(qmatrix[0])+1), object)
+        tmp[0, 1:] = np.array(list(index_map.keys()))
+        tmp[1:, 0] = np.array(list(index_map.keys()))
+        tmp[1:, 1:] = qmatrix
+        qmatrix = tmp
         # print(qmatrix)
 
         # StringIOオブジェクトを作成する
@@ -657,14 +641,31 @@ class NQSSampler:
 
         # CSVファイルの文字列を取得する
         Q = csv_buffer.getvalue()
-
+        
+        #一時フォルダ作成
+        tmpfolder = os.path.dirname(__file__) +'/tmp/'
+        # print(tmpfolder)
+        if not os.path.exists(tmpfolder):
+            os.makedirs(tmpfolder)
+        
+        #一時ファイル
         id = ulid.new()
         filename = "{}.zip".format(id.str)
-        self.__to_zip(qubo=Q, filename=filename)
+        # print(filename)
+        
+        #QUBO保存
+        with zipfile.ZipFile(tmpfolder + filename, "w") as z_file:
+            z_file.writestr("qubo_w.csv", Q, zipfile.ZIP_DEFLATED)
+        
+        #読み込み
+        with open(tmpfolder + filename, "rb") as f:
+            readfile = f.read()
+        
+        #API
         files = {
             "zipfile": (
                 filename,
-                open("/tmp/{}".format(filename), "rb"),
+                readfile,
                 "data:application/octet-stream",
             )
         }
@@ -680,17 +681,17 @@ class NQSSampler:
             headers=self.__get_headers(key),
             timeout=None,
         )
-        os.remove("/tmp/{}".format(filename))
-
-        result = json.loads(r.text)
+        
+        #一時ファイル削除
+        try:
+            os.remove(tmpfolder + filename)
+        except:
+            pass
+        
+        #一個しかない？
+        tmp = json.loads(r.text) #{'energy': -4.0, 'result': {'x': 1, 'y': 1, 'z': 0}, 'time': 3.7529351}
+        result = [[tmp['result'], tmp['energy'], population, tmp['time']]]
         return result
-
-    def __to_zip(self, qubo: str, filename: str):
-        import zipfile
-
-        z_file = zipfile.ZipFile("/tmp/{}".format(filename), "w")
-        z_file.writestr("qubo_w.csv", qubo, zipfile.ZIP_DEFLATED)
-        z_file.close()
 
     def __get_headers(self, api_key: Optional[str]) -> Dict[str, str]:
         assert api_key is not None, (
@@ -727,58 +728,55 @@ class NQSLocalSampler:
         import os
         import csv
         import io
-
-        # 重複なしに要素を抽出
-        keys = list(set(k for tup in qubo.keys() for k in tup))
-        # print(keys)
-
-        # 抽出した要素のindexマップを作成
-        index_map = {k: v for v, k in enumerate(keys)}
-        # print(index_map)
-
-        # 上記のindexマップを利用してタプルの内容をindexで書き換え
-        qubo_index = {(index_map[k[0]], index_map[k[1]]): v for k, v in qubo.items()}
-        # print(qubo_index)
-
-        # タプル内をソート
-        qubo_sorted = {
-            tuple(sorted(k)): v
-            for k, v in sorted(qubo_index.items(), key=lambda x: x[1])
-        }
-        # print(qubo_sorted)
-
-        # 量子ビット数
-        N = int(len(keys))
-
-        # QUBO matrix 初期化
-        qmatrix = np.zeros((N, N), dtype=object)
-
-        for (i, j), value in qubo_sorted.items():
-            qmatrix[i, j] = value
-
-        qmatrix = np.insert(qmatrix, 0, keys, axis=1)
-        qmatrix = np.vstack([[""] + keys[:], qmatrix])
-
+        import zipfile
+        
+        #共通前処理
+        qmatrix, index_map, N = get_matrix(qubo)
         # print(qmatrix)
-
+        
+        #1行目、1列目にビット名を合体
+        tmp = np.zeros((len(qmatrix)+1, len(qmatrix[0])+1), object)
+        tmp[0, 1:] = np.array(list(index_map.keys()))
+        tmp[1:, 0] = np.array(list(index_map.keys()))
+        tmp[1:, 1:] = qmatrix
+        qmatrix = tmp
+        # print(qmatrix)
+        
         # StringIOオブジェクトを作成する
         csv_buffer = io.StringIO()
-
+        
         # CSVファイルの文字列を書き込む
         writer = csv.writer(csv_buffer)
         for row in qmatrix:
             writer.writerow(row)
-
+        
         # CSVファイルの文字列を取得する
         Q = csv_buffer.getvalue()
-
+        
+        #一時フォルダ作成
+        tmpfolder = os.path.dirname(__file__) +'/tmp/'
+        # print(tmpfolder)
+        if not os.path.exists(tmpfolder):
+            os.makedirs(tmpfolder)
+        
+        #一時ファイル
         id = ulid.new()
         filename = "{}.zip".format(id.str)
-        self.__to_zip(qubo=Q, filename=filename)
+        # print(filename)
+        
+        #QUBO保存
+        with zipfile.ZipFile(tmpfolder + filename, "w") as z_file:
+            z_file.writestr("qubo_w.csv", Q, zipfile.ZIP_DEFLATED)
+        
+        #読み込み
+        with open(tmpfolder + filename, "rb") as f:
+            readfile = f.read()
+        
+        #API
         files = {
             "zipfile": (
                 filename,
-                open("/tmp/{}".format(filename), "rb"),
+                readfile,
                 "data:application/octet-stream",
             )
         }
@@ -792,17 +790,17 @@ class NQSLocalSampler:
             },
             timeout=None,
         )
-        os.remove("/tmp/{}".format(filename))
-
-        result = json.loads(r.text)
+        
+        #一時ファイル削除
+        try:
+            os.remove(tmpfolder + filename)
+        except:
+            pass
+        
+        #一個しかない？
+        tmp = json.loads(r.text) #{'energy': -4.0, 'result': {'x': 1, 'y': 1, 'z': 0}, 'time': 3.7529351}
+        result = [[tmp['result'], tmp['energy'], population, tmp['time']]]
         return result
-
-    def __to_zip(self, qubo: str, filename: str):
-        import zipfile
-
-        z_file = zipfile.ZipFile("/tmp/{}".format(filename), "w")
-        z_file.writestr("qubo_w.csv", qubo, zipfile.ZIP_DEFLATED)
-        z_file.close()
 
 
 
