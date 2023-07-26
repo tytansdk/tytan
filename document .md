@@ -308,3 +308,13 @@ result = solver.run(qubo, shots=500, countup=True) #show=Trueで進捗確認
 120
 ```
 120種類の解が得られた。
+
+## 商用クラウドサンプラーの使い方
+blueqatサイトでアカウント登録しAPIキーを発行。NQSSamplerは結果が1種類しか返ってこないことに注意（調整中）
+```python
+#サンプラー選択
+solver = sampler.NQSSampler(api_key='your_key') #ここか
+#サンプリング
+result = solver.run(qubo, api_key='your_key') #ここでAPIキーを指定
+```
+
