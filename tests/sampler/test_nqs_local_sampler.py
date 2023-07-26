@@ -20,9 +20,10 @@ def test_nqs_local_sampler_run():
     sampler = NQSLocalSampler()
     result = sampler.run(qubo)
     assert result is not None
-    assert result["result"] is not None
-    assert result["result"]["x"] == 0
-    assert result["result"]["y"] == 0
-    assert result["result"]["z"] == 0
-    assert result["energy"] == 0
-    assert result["time"] is not None
+    assert result[0][0] is not None
+    assert result[0][0]["x"] == 0
+    assert result[0][0]["y"] == 0
+    assert result[0][0]["z"] == 0
+    assert result[0][1] == 0 #energy
+    assert result[0][2] is not None #occ
+    assert result[0][3] is not None #time
