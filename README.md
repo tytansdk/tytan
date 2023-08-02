@@ -187,5 +187,4 @@ TYTANは商用利用前提ですので、個人での利用はもちろん企業
 |2023/03/22|GASampler追加|
 |2023/03/15|初期版|
 
-## 運営協力
-<a href="https://vigne-cla.com/" target="_blank"><img src="https://github.com/tytansdk/tytan/blob/main/img/logo_vc_f_sk.png" width="150"></a>
+
