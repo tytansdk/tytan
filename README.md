@@ -40,7 +40,7 @@ NQSSampler
 pip install -U git+https://github.com/tytansdk/tytan
 ```
 
-pipインストールはこちらです。
+pipインストールはこちらです。（更新忘れることがあります）
 ```
 pip install -U tytan
 ```
@@ -173,6 +173,7 @@ TYTANは商用利用前提ですので、個人での利用はもちろん企業
 ## 更新履歴
 |日付|内容|
 |:---|:---|
+|2023/08/21|PyPI経由のインストールエラーを解消|
 |2023/07/09|網羅探索するオプション追加|
 |2023/07/01|Compile修正, requirements.txt修正|
 |2023/06/21|Auto_array修正, SASampler性能UP|
