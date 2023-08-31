@@ -2,8 +2,6 @@ import numpy as np
 import numpy.random as nr
 import itertools
 
-from numba import jit
-
 #共通前処理
 """
 qmatrixはシンボル順ではなく適当に割り当てられたindex順であることに注意
@@ -64,75 +62,6 @@ def get_result(pool, score, index_map):
     
     return result
 
-"""
-SASampler用
-poolの重複を解除する関数
-"""
-@jit(nopython=True, cache=True)
-def variation(pool, pool_num, N, seed_in_jit):
-    #シード固定
-    if seed_in_jit != None:
-        np.random.seed(seed_in_jit) #Noneではエラーになるので数字のときだけ
-    
-    # 重複は振り直し
-    # パリエーションに余裕あれば確定非重複
-    if pool_num < 2 ** (N - 1):
-        # print('remake 1')
-        for i in range(pool_num - 1):
-            for j in range(i + 1, pool_num):
-                while (pool[i] == pool[j]).all():
-                    pool[j] = nr.randint(0, 2, N)
-    else:
-        # パリエーションに余裕なければ3トライ重複可
-        # print('remake 2')
-        for i in range(pool_num - 1):
-            for j in range(i + 1, pool_num):
-                count = 0
-                while (pool[i] == pool[j]).all():
-                    pool[j] = nr.randint(0, 2, N)
-                    count += 1
-                    if count == 3:
-                        break
-    return pool
-
-"""
-SASampler用
-アニーリング＋1フリップ
-"""
-@jit(nopython=True, cache=True)
-def anneal(pool, score, qmatrix, flip_mask, single_flip_mask):
-    # アニーリング
-    # 集団まるごと温度を下げる
-    for fm in flip_mask:
-        # フリップ後　pool_num, N
-        # pool2 = np.where(fm, 1 - pool, pool)
-        pool2 = pool.copy()
-        pool2[:, fm] = 1. - pool[:, fm]
-        score2 = np.sum((pool2 @ qmatrix) * pool2, axis=1)
-
-        # 更新マスク
-        update_mask = score2 < score
-
-        # 更新
-        pool[update_mask] = pool2[update_mask]
-        score[update_mask] = score2[update_mask]
-    
-    # 最後に1フリップ局所探索
-    # 集団まるごと
-    for fm in single_flip_mask:
-        # フリップ後
-        # pool2 = np.where(fm, 1 - pool, pool)
-        pool2 = pool.copy()
-        pool2[:, fm] = 1. - pool[:, fm]
-        score2 = np.sum((pool2 @ qmatrix) * pool2, axis=1)
-
-        # 更新マスク
-        update_mask = score2 < score
-
-        # 更新
-        pool[update_mask] = pool2[update_mask]
-        score[update_mask] = score2[update_mask]
-    return pool, score
 
 
 class SASampler:
@@ -141,12 +70,7 @@ class SASampler:
         self.seed = seed
 
     
-    def run(self, qubo, shots=100, T_num=2000, countup=False, show=False):
-        
-        #カウントSAなら分岐
-        if countup:
-            result = SASampler_countup(seed=self.seed).run(qubo, shots=shots, T_num=T_num, show=show)
-            return result
+    def run(self, qubo, shots=100, T_num=2000, show=False):
         
         #共通前処理
         qmatrix, index_map, N = get_matrix(qubo)
@@ -168,10 +92,27 @@ class SASampler:
         pool = nr.randint(0, 2, (pool_num, N)).astype(float)
         
         """
-        SASampler
-        poolの重複を解除する関数
+        poolの重複を解除する
         """
-        pool = variation(pool, pool_num, N, self.seed)
+        # 重複は振り直し
+        # パリエーションに余裕あれば確定非重複
+        if pool_num < 2 ** (N - 1):
+            # print('remake 1')
+            for i in range(pool_num - 1):
+                for j in range(i + 1, pool_num):
+                    while (pool[i] == pool[j]).all():
+                        pool[j] = nr.randint(0, 2, N)
+        else:
+            # パリエーションに余裕なければ3トライ重複可
+            # print('remake 2')
+            for i in range(pool_num - 1):
+                for j in range(i + 1, pool_num):
+                    count = 0
+                    while (pool[i] == pool[j]).all():
+                        pool[j] = nr.randint(0, 2, N)
+                        count += 1
+                        if count == 3:
+                            break
         
         # スコア初期化
         score = np.sum((pool @ qmatrix) * pool, axis=1)
@@ -200,160 +141,47 @@ class SASampler:
         single_flip_mask = np.eye(N, dtype=bool)
         
         """
-        SASampler
         アニーリング＋1フリップ
         """
-        pool, score = anneal(pool, score, qmatrix, flip_mask, single_flip_mask)
+        # アニーリング
+        # 集団まるごと温度を下げる
+        for fm in flip_mask:
+            # フリップ後　pool_num, N
+            # pool2 = np.where(fm, 1 - pool, pool)
+            pool2 = pool.copy()
+            pool2[:, fm] = 1. - pool[:, fm]
+            score2 = np.sum((pool2 @ qmatrix) * pool2, axis=1)
+    
+            # 更新マスク
+            update_mask = score2 < score
+    
+            # 更新
+            pool[update_mask] = pool2[update_mask]
+            score[update_mask] = score2[update_mask]
+        
+        # 最後に1フリップ局所探索
+        # 集団まるごと
+        for fm in single_flip_mask:
+            # フリップ後
+            # pool2 = np.where(fm, 1 - pool, pool)
+            pool2 = pool.copy()
+            pool2[:, fm] = 1. - pool[:, fm]
+            score2 = np.sum((pool2 @ qmatrix) * pool2, axis=1)
+    
+            # 更新マスク
+            update_mask = score2 < score
+    
+            # 更新
+            pool[update_mask] = pool2[update_mask]
+            score[update_mask] = score2[update_mask]
         pool = pool.astype(int)
+        
         # ----------
         #共通後処理
         result = get_result(pool, score, index_map)
         
         return result
 
-class SASampler_countup:
-    def __init__(self, seed=None):
-        #乱数シード
-        self.seed = seed
-    
-    def small_run(self, qmatrix, N, flip_mask, single_flip_mask, shots, T_num=2000, past_pool=None):
-        
-        # --- 高速疑似SA ---
-        # プール初期化
-        pool_num = shots
-        
-        # pool = nr.randint(0, 2, (pool_num, N))
-        pool = nr.randint(0, 2, (pool_num, N)).astype(float)
-        
-        """
-        過去の結果の反転から始める
-        """
-        if past_pool is not None:
-            if len(past_pool) < pool_num:
-                #一部更新
-                pool[:len(past_pool)] = 1. - past_pool
-            else:
-                #全部更新
-                pool = 1. - past_pool
-                mask = nr.choice(range(len(past_pool)), pool_num, replace=False)
-                pool = pool[mask]
-        
-        """
-        過去の結果のqmatrixエネルギーを上げる
-        """
-        #保存しておく
-        qmatrix_up = qmatrix.copy()
-        if past_pool is not None:
-            d = 1.0 / (N**2)
-            for p in past_pool:
-                #1になったインデックスの組み合わせ
-                ones_index = np.where(p == 1)[0]
-                for i, j in itertools.combinations_with_replacement(ones_index, 2):
-                    #そこのエネルギーを上げる
-                    qmatrix_up[i, j] += d
-        
-        # """
-        # SASampler
-        # poolの重複を解除する関数
-        # """
-        # pool = variation(pool, pool_num, N, self.seed)
-        
-        # スコア初期化
-        score = np.sum((pool @ qmatrix_up) * pool, axis=1)
-        
-        """
-        SASampler
-        アニーリング＋1フリップ
-        """
-        pool, score = anneal(pool, score, qmatrix_up, flip_mask, single_flip_mask)
-        pool = pool.astype(int)
-        
-        """
-        元のqmatrixで再計算
-        """
-        if past_pool is not None:
-            score = np.sum((pool @ qmatrix) * pool, axis=1)
-        
-        # ----------
-        
-        return pool, score
-    
-    def run(self, qubo, shots=100, T_num=2000, show=False):
-        
-        #共通前処理
-        qmatrix, index_map, N = get_matrix(qubo)
-        #print(qmatrix)
-        
-        #シード固定
-        nr.seed(self.seed)
-        
-        # フリップ数リスト（2個まで下がる）
-        flip = np.sort(nr.rand(T_num) ** 2)[::-1]
-        flip = (flip * max(0, N * 0.5 - 2)).astype(int) + 2
-        #print(flip)
-        
-        # フリップマスクリスト
-        flip_mask = [[1] * flip[0] + [0] * (N - flip[0])]
-        if N <= 2:
-            flip_mask = np.ones((T_num, N), int)
-        else:
-            for i in range(1, T_num):
-                tmp = [1] * flip[i] + [0] * (N - flip[i])
-                nr.shuffle(tmp)
-                # 前と重複なら振り直し
-                while tmp == flip_mask[-1]:
-                    nr.shuffle(tmp)
-                flip_mask.append(tmp)
-            flip_mask = np.array(flip_mask, bool)
-        #print(flip_mask.shape)
-        
-        # 局所探索フリップマスクリスト
-        single_flip_mask = np.eye(N, dtype=bool)
-        
-        
-        #================================
-        #初期化
-        pool_all = None
-        pool_best = None
-        score_all = None
-        small_shots = shots // 10
-        sum_shots = 0
-        
-        while sum_shots < shots:
-            #サンプリング
-            pool, score = self.small_run(qmatrix, N, flip_mask, single_flip_mask, shots=small_shots, T_num=T_num, past_pool=pool_best)
-            
-            #記録スタック
-            if pool_all is None:
-                pool_all = pool
-                score_all = score
-            else:
-                pool_all = np.vstack([pool_all, pool])
-                score_all = np.hstack([score_all, score])
-            #print(pool_all.shape)
-            #print(score_all.shape)
-            
-            #過去最低エネルギー群を抽出
-            mask = (score_all == min(score_all))
-            pool_best = pool_all[mask]
-            #重複を合体
-            pool_best = np.unique(pool_best, axis=0, return_index=False, return_counts=False)
-            
-            #シードスロット
-            if type(self.seed) is int:
-                self.seed += 1
-            
-            #カウント増加
-            sum_shots += small_shots
-            
-            if show:
-                print('sum_shots', sum_shots, 'best_len', len(pool_best))
-        #================================
-        
-        #共通後処理
-        result = get_result(pool_all, score_all, index_map)
-        
-        return result
 
 class GASampler:
     def __init__(self, seed=None):
@@ -361,7 +189,7 @@ class GASampler:
         self.max_count = 3
         self.seed = seed
 
-    def run(self, qubo, shots=100):
+    def run(self, qubo, shots=100, verbose=True):
         #共通前処理
         qmatrix, index_map, N = get_matrix(qubo)
         #print(qmatrix)
@@ -419,10 +247,10 @@ class GASampler:
             score[parent_id] = s[select_id]
             # 進行表示1
             if gen % 500 == 0:
-                print("-", end="")
+                if verbose: print("-", end="")
                 sw = False
                 if gen % 10000 == 0:
-                    print(" {}/{}".format(gen, self.max_gen))
+                    if verbose: print(" {}/{}".format(gen, self.max_gen))
                     sw = True
             # 終了判定
             if gen % 10 == 0:
@@ -435,8 +263,8 @@ class GASampler:
                     break
         # 進行表示2
         if not sw:
-            print()
-        print("Automatic end at gen {}/{}".format(gen, self.max_gen))
+            if verbose: print()
+        if verbose: print("Automatic end at gen {}/{}".format(gen, self.max_gen))
 
         # ----------
         #共通後処理
@@ -807,137 +635,6 @@ class NQSLocalSampler:
 
 if __name__ == "__main__":
     
-    import pickle
-    import time, os
-    from tytan import symbols, symbols_list, symbols_nbit, Compile, Auto_array
-    
-    # def renritsu(size=8*3, shots=10):
-        
-    #     #量子ビットをNビット表現で用意する
-    #     x = symbols_nbit(0, 256, 'x{}', num=size//3)
-    #     y = symbols_nbit(0, 256, 'y{}', num=size//3)
-    #     z = symbols_nbit(0, 256, 'z{}', num=size//3)
-        
-    #     #連立方程式の設定
-    #     H = 0
-    #     H += (10*x +14*y +4*z - 5120)**2
-    #     H += ( 9*x +12*y +2*z - 4230)**2
-    #     H += ( 7*x + 5*y +2*z - 2360)**2
-        
-    #     #コンパイル
-    #     file = f'../speed_test/qubo_renritsu_{size}.pkl'
-    #     if os.path.isfile(file):
-    #         with open(file, 'rb') as f:
-    #             qubo = pickle.load(f)
-    #     else:
-    #         qubo, offset = Compile(H).get_qubo()
-    #         with open(file, 'wb') as f:
-    #             pickle.dump(qubo, f)
-            
-    #     #サンプラー選択
-    #     solver = SASampler(seed=0)
-    #     #サンプリング
-    #     s = time.time()
-    #     result = solver.run(qubo, shots=shots, countup=1, show=1)
-        
-    #     #１つ目の解をNビット表現から数値に戻して確認
-    #     ans_x = Auto_array(result[0]).get_nbit_value(x)
-    #     ans_y = Auto_array(result[0]).get_nbit_value(y)
-    #     ans_z = Auto_array(result[0]).get_nbit_value(z)
-    #     print(ans_x, ans_y, ans_z)
-    #     print(result[0][1] + 49676900)
-        
-    #     #suc = abs(ans_x - 130) + abs(ans_y - 230) + abs(ans_z - 150) < 0.5
-    #     suc = abs(result[0][1] + 49676900) < 0.0001
-    #     print(f'renritsu | {size:03} | {shots:03} | {suc} | {round(time.time() - s, 3)}s')
-    
-    # def renritsu_test():
-        
-    #     #量子ビットをNビット表現で用意する
-    #     x = symbols('x')
-    #     y = symbols('y')
-    #     z = symbols('z')
-        
-    #     #連立方程式の設定
-    #     H = 0
-    #     H += ( 5*x -  y +2*z - 7)**2
-    #     H += (-3*x +4*y +  z + 2)**2
-    #     H += (   x -2*y -4*z + 3)**2
-        
-    #     #コンパイル
-    #     qubo, offset = Compile(H).get_qubo()
-            
-    #     #サンプラー選択
-    #     solver = SASampler(seed=2)
-    #     #サンプリング
-    #     result = solver.run(qubo, shots=10)
-        
-    #     #確認
-    #     for r in result:
-    #         print(r)
-    
-    # renritsu(96, 333) #24, 48, 72, 96
-    
-    # renritsu_test()
-    
-    
-    
-    
-    # #----------------------------------------
-    # # 並び替え問題で解の網羅性を比較
-    # #----------------------------------------
-    # #量子ビットを用意する
-    # q = symbols_list([5, 5], 'q{}_{}')
-    
-    # H = 0
-    # #ワンホット
-    # for i in range(5):
-    #     tmp = 0
-    #     for k in range(5):
-    #         tmp += q[i, k]
-    #     H += (tmp - 1)**2
-    
-    # #行
-    # for k in range(5):
-    #     tmp = 0
-    #     for i in range(5):
-    #         tmp += q[i, k]
-    #     H += (tmp - 1)**2
-    
-    # #print(H)
-    
-    # #コンパイル
-    # qubo, offset = Compile(H).get_qubo()
-    # print(f'offset\n{offset}')
-    
-    # #サンプラー選択
-    # solver = SASampler_old(seed=0)
-    
-    # #サンプリング
-    # s = time.time()
-    # result = solver.run(qubo, shots=500)
-    # print(f'{round(time.time() - s, 3)}s')
-    
-    # #
-    # count = 0
-    # for r in result:
-    #     if r[1] == -offset:
-    #         count += 1
-    # print(count)
-    
-    # #サンプラー選択
-    # solver = SASampler(seed=0)
-    
-    # #サンプリング
-    # s = time.time()
-    # result = solver.run(qubo, shots=500)
-    # print(f'{round(time.time() - s, 3)}s')
-    
-    # #
-    # count = 0
-    # for r in result:
-    #     if r[1] == -offset:
-    #         count += 1
-    # print(count)
+    pass
     
     
