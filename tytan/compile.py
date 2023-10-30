@@ -19,6 +19,18 @@ class Compile:
         if 'sympy.core' in str(type(self.expr)):
             #式を展開して同類項をまとめる
             expr = sympy.expand(self.expr)
+
+            #最高次数チェック
+            def highest_order(expr):
+                # 数式から変数を取得
+                variables = list(expr.free_symbols)
+                # 数式を多項式としてオブジェクト化
+                poly_obj = sympy.Poly(expr, *variables)
+                # 多項式の各項について総合的な次数を計算し、その中で最大のものを返す
+                return max(sum(mon) for mon in poly_obj.monoms())
+            ho = highest_order(expr)
+            if ho > 2:
+                raise Exception(f'Error! The highest order of the constraint ({ho}) must be within 2!')
             
             #二乗項を一乗項に変換
             expr = expr.replace(lambda e: isinstance(e, sympy.Pow) and e.exp == 2, lambda e: e.base)
