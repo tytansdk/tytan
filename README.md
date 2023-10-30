@@ -1,14 +1,8 @@
 ## 最新情報
 
-2023/06/21 Auto_array関数をより使いやすく。SASamplerの性能も上げました（たぶん本当）
+2023/10/30 制約が2次を超える場合に明示的にエラーを返すように修正しました。
 
-2023/06/17 N-bit表現を扱うsymbols_nbit, Auto_array.get_nbit_value関数が追加されました。
-
-2023/06/17 requirements.txtが軽くなりました。
-
-2023/06/12 SASampler, GASamplerの性能が上がりました（ウソかも）
-
-2023/06/10 便利なsymbols_list, symbols_define関数が追加されました。[ドキュメント](https://github.com/tytansdk/tytan/blob/main/document%20.md) が作成されました。
+全ての関数については [ドキュメント](https://github.com/tytansdk/tytan/blob/main/document%20.md) をご覧ください。
 
 
 ## TYTAN（タイタン）
@@ -173,6 +167,7 @@ TYTANは商用利用前提ですので、個人での利用はもちろん企業
 ## 更新履歴
 |日付|内容|
 |:---|:---|
+|2023/10/30|制約が2次を超える場合にエラーを返す|
 |2023/08/21|PyPI経由のインストールエラーを解消|
 |2023/07/09|網羅探索するオプション追加|
 |2023/07/01|Compile修正, requirements.txt修正|
