@@ -1,6 +1,21 @@
-import sympy
+import symengine
 import numpy as np
 import pandas as pd
+
+
+def replace_function(expression, function, new_function):
+    if expression.is_Atom:
+        return expression
+    else:
+        replaced_args = (
+                replace_function(arg, function,new_function)
+                for arg in expression.args
+            )
+        if ( expression.__class__ == symengine.Pow):
+            return new_function(*replaced_args)
+        else:
+            return expression.func(*replaced_args)
+
 
 class Compile:
     def __init__(self, expr):
@@ -10,58 +25,69 @@ class Compile:
         """
         get qubo data
         Raises:
-            TypeError: Input type is sympy, numpy or pandas.
+            TypeError: Input type is symengine, numpy or pandas.
         Returns:
             Tuple: qubo is dict. offset is float.
         """
-        
-        #sympy型のサブクラス
-        if 'sympy.core' in str(type(self.expr)):
-            #式を展開して同類項をまとめる
-            expr = sympy.expand(self.expr)
 
-            #最高次数チェック
-            def highest_order(expr):
-                # 数式から変数を取得
-                variables = list(expr.free_symbols)
-                # 数式を多項式としてオブジェクト化
-                poly_obj = sympy.Poly(expr, *variables)
-                # 多項式の各項について総合的な次数を計算し、その中で最大のものを返す
-                return max(sum(mon) for mon in poly_obj.monoms())
-            ho = highest_order(expr)
-            if ho > 2:
-                raise Exception(f'Error! The highest order of the constraint ({ho}) must be within 2!')
+        #symengine型のサブクラス
+        if 'symengine.lib' in str(type(self.expr)):
+            #式を展開して同類項をまとめる
+            expr = symengine.expand(self.expr)
             
+            #最高字数を調べながらオフセットを記録
+            #項に分解
+            members = str(expr).split(' ')
+            
+            #各項をチェック
+            offset = 0
+            for member in members:
+                #数字単体ならオフセット
+                try:
+                    offset += float(member) #エラーなければ数字
+                except:
+                    pass
+                #'*'で分解
+                texts = member.split('*')
+                #係数を取り除く
+                try:
+                    float(texts[0]) #エラーなければ係数あり
+                    texts = texts[1:]
+                except:
+                    pass
+                # 以下はセーフ
+                # q0   ['q0']
+                # q0*q1   ['q0', 'q1']
+                # q0**2   ['q0', '', '2']
+                
+                # 以下はダメ
+                # q0*q1**2   ['q0', 'q1', '', '2']
+                # q0*q1*q2   [q0', 'q1', 'q2']
+                # q0**2*q1**2    ['q0', '', '2', 'q1', '', '2']
+                if len(texts) >= 4:
+                    raise Exception(f'Error! The highest order of the constraint must be within 2.')
+                if len(texts) == 3 and texts[1] != '':
+                    raise Exception(f'Error! The highest order of the constraint must be within 2.')
+
             #二乗項を一乗項に変換
-            expr = expr.replace(lambda e: isinstance(e, sympy.Pow) and e.exp == 2, lambda e: e.base)
+            expr = replace_function(expr, lambda e: isinstance(e, symengine.Pow) and e.exp == 2, lambda e, *args: e)
             
             #もう一度同類項をまとめる
-            expr = sympy.expand(expr)
-            
-            #定数項をoffsetとして抽出 #定数項は一番最後 #もう少し高速化できる？
-            # offset = expr.as_ordered_terms()[-1] #定数項は一番最後 #もう少し高速化できる？
-            # #定数項がなければ0
-            # if '*' in str(offset):
-            #     offset = 0
-            offset = 0
-            for ex in expr.as_ordered_terms()[::-1]:
-                if 'numbers.' in str(type(ex)):
-                    offset = ex
-                    break
-            
-            #offsetを引いて消す
-            expr2 = expr - offset
-            
+            expr = symengine.expand(expr)
+
             #文字と係数の辞書
-            coeff_dict = expr2.as_coefficients_dict()
-            
+            coeff_dict = expr.as_coefficients_dict()
+
             #QUBO
             qubo = {}
             for key, value in coeff_dict.items():
+                #定数項はパス
+                if key.is_Number:
+                    continue
                 tmp = str(key).split('*')
                 #tmp = ['q0'], ['q0', 'q1']のどちらかになっていることを利用
                 qubo[(tmp[0], tmp[-1])] = float(value)
-                
+
             return qubo, offset
 
         # numpy
@@ -100,4 +126,4 @@ class Compile:
             return qubo, offset
 
         else:
-            raise TypeError("Input type is sympy, numpy or pandas.")
+            raise TypeError("Input type is symengine, numpy or pandas.")

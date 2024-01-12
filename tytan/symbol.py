@@ -1,13 +1,13 @@
 import numpy as np
 import itertools
-from sympy import symbols as sympy_symbols
+from symengine import symbols as symengine_symbols
 
 """
 SympyのSymbol関数にそのまま投げる関数
 importをTYTANだけにするための申し訳ない方策
 """
 def symbols(passed_txt):
-    return sympy_symbols(passed_txt)
+    return symengine_symbols(passed_txt)
 
 
 
@@ -19,7 +19,7 @@ def symbols_list(shape, format_txt=None):
     if type(shape) == int:
         shape = [shape]
     #print(shape)
-    
+
     #フォーマットがなければ自動作成
     if format_txt == None:
         if len(shape) == 1:
@@ -32,16 +32,16 @@ def symbols_list(shape, format_txt=None):
             format_txt = 'q{}_{}_{}_{}'
         if len(shape) == 5:
             format_txt = 'q{}_{}_{}_{}_{}'
-    
+
     #次元チェック
     dim = len(shape)
     if dim != format_txt.count('{}'):
         raise
-    
+
     #次元が1～5でなければエラー
     if dim not in [1, 2, 3, 4, 5]:
         raise
-    
+
     #次元で分岐、面倒なのでとりあえずこれで5次元まで対応したこととする
     if dim == 1:
         q = []
@@ -93,9 +93,9 @@ def symbols_list(shape, format_txt=None):
                     tmp2.append(tmp3)
                 tmp1.append(tmp2)
             q.append(tmp1)
-    
+
     return np.array(q)
-    
+
 
 
 """
@@ -107,7 +107,7 @@ def symbols_define(shape, format_txt=None):
     if type(shape) == int:
         shape = [shape]
     #print(shape)
-    
+
     #フォーマットがなければ自動作成
     if format_txt == None:
         if len(shape) == 1:
@@ -120,16 +120,16 @@ def symbols_define(shape, format_txt=None):
             format_txt = 'q{}_{}_{}_{}'
         if len(shape) == 5:
             format_txt = 'q{}_{}_{}_{}_{}'
-    
+
     #次元チェック
     dim = len(shape)
     if dim != format_txt.count('{}'):
         raise
-    
+
     #次元が1～5でなければエラー
     if dim not in [1, 2, 3, 4, 5]:
         raise
-    
+
     #次元で分岐、面倒なのでとりあえずこれで5次元まで対応したこととする
     ret = ''
     command1 = f'{format_txt} = symbols(\'{format_txt}\')'
@@ -153,9 +153,9 @@ def symbols_define(shape, format_txt=None):
         for i, j, k, l, m in itertools.product(range(shape[0]), range(shape[1]), range(shape[2]), range(shape[3]), range(shape[4])):
             command2 = eval('command1').format(i, j, k, l, m, i, j, k, l, m)
             ret += command2 + '\r\n'
-    
+
     return ret[:-2]
-    
+
     # #表示用
     # if dim == 1:
     #     first_command =eval('command1').format(0, 0)
@@ -178,12 +178,11 @@ def symbols_define(shape, format_txt=None):
 def symbols_nbit(start, stop, format_txt, num=8):
     #生成
     q = symbols_list(num, format_txt=format_txt)
-    
+
     #式
     ret = 0
     for n in range(num):
         #係数を規格化してから量子ビットをかけたい
         ret += (start + (stop - start)) * 2**(num - n - 1) / 2**num * q[n]
-    
-    return ret
 
+    return ret
