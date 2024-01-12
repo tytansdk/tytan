@@ -1,6 +1,8 @@
+import re
 import symengine
 import numpy as np
 import pandas as pd
+from sympy import Rational
 
 
 def replace_function(expression, function, new_function):
@@ -51,7 +53,8 @@ class Compile:
                 texts = member.split('*')
                 #係数を取り除く
                 try:
-                    float(texts[0]) #エラーなければ係数あり
+                    texts[0] = re.sub(r'[()]', '', texts[0]) #'(5/2)'みたいなのも来る
+                    float(Rational(texts[0])) #分数も対応 #エラーなければ係数あり
                     texts = texts[1:]
                 except:
                     pass
