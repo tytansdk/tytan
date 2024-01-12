@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import unittest
 
 import numpy as np
@@ -7,10 +5,7 @@ from tytan import (Auto_array, Compile, sampler, symbols, symbols_define,
                    symbols_list, symbols_nbit)
 
 
-QuboDict = dict[tuple, float]
-
-
-def are_same_qubo_matrices(qubo1: QuboDict, qubo2: QuboDict):
+def are_same_qubo_matrices(qubo1, qubo2):
     if len(qubo1) != len(qubo2):
         return False
 
