@@ -7,7 +7,7 @@ from tytan import (Auto_array, Compile, sampler, symbols, symbols_define,
                    symbols_list, symbols_nbit)
 
 
-QuboDict = dict[tuple[str, str], int | float]
+QuboDict = dict[tuple, int | float]
 
 
 def are_same_qubo_matrices(qubo1: QuboDict, qubo2: QuboDict):
