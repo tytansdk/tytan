@@ -6,6 +6,9 @@
 
 全ての関数については [ドキュメント](https://github.com/tytansdk/tytan/blob/main/document%20.md) をご覧ください。
 
+## チュートリアル
+
+毎週木曜日22時からオンライン解説会。オンデマンド動画もあります。→ [TYTANチュートリアルのページ](https://github.com/tytansdk/tytan_tutorial)
 
 ## TYTAN（タイタン）
 大規模QUBOアニーリングのためのSDKです。
