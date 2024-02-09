@@ -5,4 +5,3 @@ pandas
 sympy
 scipy>=1.9.0
 symengine
-torch
