@@ -2,7 +2,7 @@ import re
 import symengine
 import numpy as np
 import pandas as pd
-from sympy import Rational
+from sympy import sympify, Poly
 
 
 def replace_function(expression, function, new_function):
@@ -17,6 +17,55 @@ def replace_function(expression, function, new_function):
             return new_function(*replaced_args)
         else:
             return expression.func(*replaced_args)
+
+
+def degree_leq_2_check(expr):
+    """
+    項の次数が2以下かどうか調べる関数
+
+    Args:
+        expr: 項のsymengine表現
+    Returns:
+        bool: 次数が2以下かどうか
+    """
+    # 項が1変数だけならTrue
+    if expr.is_Symbol:
+        return True
+    # 項が定数項ならTrue
+    elif expr.is_Number:
+        return True
+    # 項がべき乗項のとき
+    elif expr.is_Pow:
+        # べき乗項に含まれる要素数が2より大きかったらFalse
+        if len(expr.args) > 2:
+            return False
+        else:  # べき乗項が x^yで表されるとき
+            base, exp = expr.args
+            # 底が変数で指数が定数のとき
+            if base.is_Symbol and exp.is_Number:
+                # 指数が2以下ならTrue
+                if int(exp) <= 2:
+                    return True
+                # 指数が3以上のときはFalse
+                return False
+            else:  # 指数が変数である場合などはFalse
+                return False
+    # 項が乗法のとき
+    elif expr.is_Mul:
+        # 要素数が3より大きい場合はFalse
+        if len(expr.args) > 3:
+            return False
+        # 要素数が2以下ならTrue
+        elif len(expr.args) <= 2:
+            return True
+        # 以下は要素数が3つの時
+        # 3つすべてが変数の場合
+        if all([arg.is_Symbol for arg in expr.args]):
+            return False
+        else:
+            return True
+    # 変数、定数、べき乗、乗法でないときFalse
+    return False
 
 
 class Compile:
@@ -36,45 +85,22 @@ class Compile:
         if 'symengine.lib' in str(type(self.expr)):
             #式を展開して同類項をまとめる
             expr = symengine.expand(self.expr)
-            
             #最高字数を調べながらオフセットを記録
             #項に分解
-            members = str(expr).split(' ')
-            
-            #各項をチェック
             offset = 0
-            for member in members:
-                #数字単体ならオフセット
-                try:
-                    offset += float(member) #エラーなければ数字
-                except:
-                    pass
-                #'*'で分解
-                texts = member.split('*')
-                #係数を取り除く
-                try:
-                    texts[0] = re.sub(r'[()]', '', texts[0]) #'(5/2)'みたいなのも来る
-                    float(Rational(texts[0])) #分数も対応 #エラーなければ係数あり
-                    texts = texts[1:]
-                except:
-                    pass
-                # 以下はセーフ
-                # q0   ['q0']
-                # q0*q1   ['q0', 'q1']
-                # q0**2   ['q0', '', '2']
-                
-                # 以下はダメ
-                # q0*q1**2   ['q0', 'q1', '', '2']
-                # q0*q1*q2   [q0', 'q1', 'q2']
-                # q0**2*q1**2    ['q0', '', '2', 'q1', '', '2']
-                if len(texts) >= 4:
-                    raise Exception(f'Error! The highest order of the constraint must be within 2.')
-                if len(texts) == 3 and texts[1] != '':
+            for term in expr.args:
+
+                # 定数項はオフセットに追加
+                if term.is_Number:
+                    offset += float(term)
+                    continue
+
+                if not degree_leq_2_check(term):  # 次数が2より大きい場合はエラー
                     raise Exception(f'Error! The highest order of the constraint must be within 2.')
 
             #二乗項を一乗項に変換
             expr = replace_function(expr, lambda e: isinstance(e, symengine.Pow) and e.exp == 2, lambda e, *args: e)
-            
+
             #もう一度同類項をまとめる
             expr = symengine.expand(expr)
 
