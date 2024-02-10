@@ -90,7 +90,7 @@ class SASampler:
         pool_num = shots
         # pool = nr.randint(0, 2, (pool_num, N))
         pool = nr.randint(0, 2, (pool_num, N)).astype(float)
-        
+
         """
         poolの重複を解除する
         """
@@ -632,6 +632,91 @@ class NQSLocalSampler:
 
 
 
+class ArminSampler:
+    def __init__(self, mode='CPU', seed=None, seed_cuda=None):
+        #乱数シード
+        self.seed = seed
+        self.seed_cuda = seed_cuda
+        self.mode = mode
+
+    def run(self, qubo, shots=1, initial_temp=10.0, final_temp=0.1, alpha=0.95, num_iterations=10000, show=False):
+        import torch
+        
+        #共通前処理
+        qmatrix, index_map, N = get_matrix(qubo)
+        qmatrix = torch.tensor(qmatrix).float()
+        #print(qmatrix)
+
+        # CUDA使えるか確認
+        #print(torch.cuda.is_available())
+
+        if self.mode == 'GPU' and torch.cuda.is_available() == True:
+            qmatrix = qmatrix.to('cuda:0')
+            print("GPU MODE")
+        else:
+            print("CPU MODE")
+            self.mode = 'CPU'
+    
+        # シード値を固定
+        if self.seed:
+            torch.manual_seed(self.seed)
+
+        # CUDAを使用する場合は以下も設定
+        if self.seed_cuda:
+            torch.cuda.manual_seed(self.seed_cuda)
+            torch.cuda.manual_seed_all(self.seed_cuda)
+
+        # 初期状態
+        if self.mode == 'CPU':
+            x = torch.randint(0, 2, (N,)).float()
+        else: # GPU
+            x = torch.randint(0, 2, (N,), device="cuda:0").float()
+
+        # ハイパーパラメータ
+        initial_temp = initial_temp  # 初期温度
+        final_temp = final_temp  # 最終温度
+        alpha = alpha  # 温度減少率
+        num_iterations = num_iterations  # 繰り返し回数
+
+        # 初期温度
+        temp = initial_temp
+
+        # 結果格納用のlist
+        history = []
+        
+        # ループの開始
+        for i in range(num_iterations):
+            # 新しいテンソルを生成
+            new_x = x.clone()
+    
+            # テンソルの長さ内でランダムなインデックスを生成
+            random_index = torch.randint(0, len(x), (1,)).item()
+
+            # ランダムに選択されたインデックスの値を反転
+            new_x[random_index] = 1 - new_x[random_index]
+
+            obj_old = x@qmatrix@x
+            obj_new = new_x@qmatrix@new_x
+            history.append(obj_old.item())
+    
+            # エネルギー差を計算
+            energy_diff = obj_new - obj_old
+
+            # 新しい状態が優れているか、あるいは確率的に受け入れるかを判断
+            if torch.rand(1).item() < torch.exp(-energy_diff/temp).item():
+                x = new_x
+    
+            # 温度を下げる（ちょっと実装怪しい）
+            temp = max(final_temp, temp * alpha)
+
+        # 描画
+        if show == True:
+            import matplotlib.pyplot as plt
+            plt.plot(history)
+            
+        #共通後処理
+        result = get_result(np.array([x.int().tolist()]), np.array([(x@qmatrix@x).item()]), index_map)
+        return result
 
 if __name__ == "__main__":
     
