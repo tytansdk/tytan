@@ -635,11 +635,11 @@ class NQSLocalSampler:
 
 
 class ArminSampler:
-    def __init__(self, seed=None, mode='CPU', device='cuda:0', verbose=1):
+    def __init__(self, seed=None, mode='GPU', device='cuda:0', verbose=1):
         #乱数シード
         self.seed = seed
         self.mode = mode
-        self.device = device
+        self.device_input = device
         self.verbose = verbose
 
     def run(self, qubo, shots=100, T_num=2000, show=False):
@@ -662,9 +662,15 @@ class ArminSampler:
         
         # CUDA使えるか確認
         if self.mode == 'GPU' and torch.cuda.is_available():
-            pass
+            if self.device_input == 'cuda:0': #指示がない場合
+                self.device = 'cuda:0'
+            else:
+                self.device = self.device_input
         elif self.mode == 'GPU' and torch.backends.mps.is_available():
-            self.device = 'mps'
+            if self.device_input == 'cuda:0': #指示がない場合
+                self.device = 'mps:0'
+            else:
+                self.device = self.device_input
         else:
             self.mode = 'CPU'
             self.device = 'cpu'
@@ -678,19 +684,14 @@ class ArminSampler:
         random.seed(int(time.time()))
         nr.seed(int(time.time()))
         torch.manual_seed(int(time.time()))
-        torch.cuda.manual_seed(int(time.time()))
-        torch.cuda.manual_seed_all(int(time.time()))
         torch.backends.cudnn.deterministic = True
         torch.use_deterministic_algorithms = True
         
         #シード固定
         if self.seed != None:
-            print(self.seed)
             random.seed(self.seed)
             nr.seed(self.seed)
             torch.manual_seed(self.seed)
-            torch.cuda.manual_seed(self.seed)
-            torch.cuda.manual_seed_all(self.seed)
         
         #
         shots = max(int(shots), 100)
@@ -793,5 +794,70 @@ class ArminSampler:
 
 
 if __name__ == "__main__":
-    pass
+    import time, os, sys
+    from tytan import symbols_list, Compile
+    
+    size = 24
+    shots = 100
+    
+    num_people = size #人の数
+    num_time = size #シフトの時間
+    
+    #量子ビットを用意
+    q = symbols_list([num_people], 'q_{}')
+    
+    #シフト枠
+    shift = np.ones((num_time)) * 2
+    
+    ppl = np.zeros((num_people, num_time))
+    for i in range(num_people//2):
+        ppl[i, i] = 2
+        ppl[i, num_time//2 + i] = 2
+    # choice = [0, 1]
+    # weight = [(num_time-2.0)/num_time, 2.0/num_time]
+    for i in range(num_people//2, num_people):
+        ppl[i] = np.random.randint(0, 2, num_time) * 8.0 / num_time
+        # ppl[i] = np.random.choice(choice, num_time, p=weight)  
+    np.set_printoptions(threshold=np.inf)
+    # print(ppl)
+    
+    # QUBOを作る。それぞれの時間に対して、枠の人数に収まるように変数を格納。
+    H = 0
+    for j in range(num_time):
+        tmp = 0
+        for i in range(num_people):
+            tmp += ppl[i][j] * q[i]
+        H += (tmp - shift[i])**2
+    #print(H)
+    
+    # H = 2*q[0]*q[1] + 1*q[2]*q[3] + 2*q[4] + q[5]
+    
+    #コンパイル
+    s = time.time()
+    qubo, offset = Compile(H).get_qubo()
+    print(f'{round(time.time() - s, 1)} s')
+    
+        
+    #サンプラー選択
+    solver = ArminSampler(seed=None, mode='GPU')
+    #サンプリング
+    s = time.time()
+    result = solver.run(qubo, shots=shots, show=True)
+    
+    #確認
+    tmp = np.zeros((num_people, num_time), int)
+    r = result[0][0]
+    print(result[0][1], result[0][2])
+    for k in r.keys():
+        b = int(r[k])
+        i = int(k.split('_')[1])
+        if b == 1:
+            tmp[i] = ppl[i]
+    #print(tmp)
+    print(np.sum(tmp, axis=0))
+    print(result[0][1] + size*2**2)
+    
+    # suc = (np.sum(tmp, axis=0) == 2).all()
+    suc = abs(result[0][1] + size*2**2) < 0.0001
+    print(f'schedule | {size:03} | {shots:04} | {suc} | {round(time.time() - s, 1)} s | {round(sys.getsizeof(qubo)/1024, 1)} KB |')
     
