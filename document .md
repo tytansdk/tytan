@@ -272,13 +272,13 @@ pytorchは別途インストールする必要があります。
 
 ```python
 #サンプラー選択
-solver = sampler.ArminSampler(seed=None, mode='CPU', device='cuda:0', verbose=1)
+solver = sampler.ArminSampler(seed=None, mode='GPU', device='cuda:0', verbose=1)
 #サンプリング
 result = solver.run(qubo, shots=100, T_num=2000, show=False)
 ```
 
-mode='CPU'　GPUモードにするには'GPU'<br>
-device='cuda:0'　複数GPUを挿している場合でcuda:1以降を指定したい場合に使用<br>
+mode='GPU'　CPUモードにするには'CPU'<br>
+device='cuda:0'　複数GPUを挿している場合でcuda:1以降を指定したい場合に使用。Macの'mps:0'とかもここ<br>
 verbose=1　繰り返し実行時などでモード表示を出したくなければ0に<br>
 shots=100　サンプリング数<br>
 T_num=2000　フリップ繰り返し数。温度をよりゆっくり下げたければ4000とかに増やす<br>
