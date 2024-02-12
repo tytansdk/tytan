@@ -1,3 +1,5 @@
+import sys
+import time
 import numpy as np
 import numpy.random as nr
 import itertools
@@ -633,93 +635,228 @@ class NQSLocalSampler:
 
 
 class ArminSampler:
-    def __init__(self, mode='CPU', seed=None, seed_cuda=None):
+    def __init__(self, seed=None, mode='CPU', device='cuda:0', verbose=1):
         #乱数シード
         self.seed = seed
-        self.seed_cuda = seed_cuda
         self.mode = mode
+        self.device = device
+        self.verbose = verbose
 
-    def run(self, qubo, shots=1, initial_temp=10.0, final_temp=0.1, alpha=0.95, num_iterations=10000, show=False):
-        import torch
+    def run(self, qubo, shots=100, T_num=2000, show=False):
+        #pytorch確認
+        attention = False
+        try:
+            import random
+            import torch
+        except:
+            attention = True
+        if attention:
+            print()
+            print('=======================\n= A T T E N T I O N ! =\n=======================')
+            print('ArminSampler requires PyTorch installation.\nUse "pip install torch" (or others) and ensure\n-------\nimport torch\ntorch.cuda.is_available()\n#torch.backends.mps.is_available() #if Mac\n-------\noutputs True to set up the environment.')
+            print()
+            sys.exit()
         
         #共通前処理
         qmatrix, index_map, N = get_matrix(qubo)
-        qmatrix = torch.tensor(qmatrix).float()
-        #print(qmatrix)
-
-        # CUDA使えるか確認
-        #print(torch.cuda.is_available())
-
-        if self.mode == 'GPU' and torch.cuda.is_available() == True:
-            qmatrix = qmatrix.to('cuda:0')
-            print("GPU MODE")
-        else:
-            print("CPU MODE")
-            self.mode = 'CPU'
-    
-        # シード値を固定
-        if self.seed:
-            torch.manual_seed(self.seed)
-
-        # CUDAを使用する場合は以下も設定
-        if self.seed_cuda:
-            torch.cuda.manual_seed(self.seed_cuda)
-            torch.cuda.manual_seed_all(self.seed_cuda)
-
-        # 初期状態
-        if self.mode == 'CPU':
-            x = torch.randint(0, 2, (N,)).float()
-        else: # GPU
-            x = torch.randint(0, 2, (N,), device="cuda:0").float()
-
-        # ハイパーパラメータ
-        initial_temp = initial_temp  # 初期温度
-        final_temp = final_temp  # 最終温度
-        alpha = alpha  # 温度減少率
-        num_iterations = num_iterations  # 繰り返し回数
-
-        # 初期温度
-        temp = initial_temp
-
-        # 結果格納用のlist
-        history = []
         
-        # ループの開始
-        for i in range(num_iterations):
-            # 新しいテンソルを生成
-            new_x = x.clone()
+        # CUDA使えるか確認
+        if self.mode == 'GPU' and torch.cuda.is_available():
+            pass
+        elif self.mode == 'GPU' and torch.backends.mps.is_available():
+            self.device = 'mps'
+        else:
+            self.mode = 'CPU'
+            self.device = 'cpu'
+        
+        #モード表示
+        if self.verbose > 0:
+            print(f'MODE: {self.mode}')
+            print(f'DEVICE: {self.device}')
     
-            # テンソルの長さ内でランダムなインデックスを生成
-            random_index = torch.randint(0, len(x), (1,)).item()
+        # ランダムシード
+        random.seed(int(time.time()))
+        nr.seed(int(time.time()))
+        torch.manual_seed(int(time.time()))
+        torch.cuda.manual_seed(int(time.time()))
+        torch.cuda.manual_seed_all(int(time.time()))
+        torch.backends.cudnn.deterministic = True
+        torch.use_deterministic_algorithms = True
+        
+        #シード固定
+        if self.seed != None:
+            print(self.seed)
+            random.seed(self.seed)
+            nr.seed(self.seed)
+            torch.manual_seed(self.seed)
+            torch.cuda.manual_seed(self.seed)
+            torch.cuda.manual_seed_all(self.seed)
+        
+        #
+        shots = max(int(shots), 100)
+        
+        # --- テンソル疑似SA ---
+        #
+        qmatrix = torch.tensor(qmatrix, device=self.device).float()
+        
+        # プール初期化
+        pool_num = shots
+        pool = torch.randint(0, 2, (pool_num, N), device=self.device).float()
+        
+        # スコア初期化
+        score = torch.sum((pool @ qmatrix) * pool, dim=1)
 
-            # ランダムに選択されたインデックスの値を反転
-            new_x[random_index] = 1 - new_x[random_index]
-
-            obj_old = x@qmatrix@x
-            obj_new = new_x@qmatrix@new_x
-            history.append(obj_old.item())
+        # フリップ数リスト（2個まで下がる）
+        flip = np.sort(nr.rand(T_num) ** 2)[::-1]
+        flip = (flip * max(0, N * 0.5 - 2)).astype(int) + 2
+        #print(flip)
+        
+        # フリップマスクリスト
+        flip_mask = [[1] * flip[0] + [0] * (N - flip[0])]
+        if N <= 2:
+            flip_mask = np.ones((T_num, N), int)
+        else:
+            for i in range(1, T_num):
+                tmp = [1] * flip[i] + [0] * (N - flip[i])
+                nr.shuffle(tmp)
+                # 前と重複なら振り直し
+                while tmp == flip_mask[-1]:
+                    nr.shuffle(tmp)
+                flip_mask.append(tmp)
+            flip_mask = np.array(flip_mask, bool)
+        flip_mask = torch.tensor(flip_mask).bool()
+        #print(flip_mask.shape)
+        
+        # 局所探索フリップマスクリスト
+        single_flip_mask = torch.eye(N, dtype=bool)
+        #print(single_flip_mask)
+        
+        # スコア履歴
+        score_history = []
+        
+        """
+        アニーリング＋1フリップ
+        """
+        # アニーリング
+        # 集団まるごと温度を下げる
+        for fm in flip_mask:
+            pool2 = pool.clone()
+            pool2[:, fm] = 1. - pool[:, fm]
+            score2 = torch.sum((pool2 @ qmatrix) * pool2, dim=1)
     
-            # エネルギー差を計算
-            energy_diff = obj_new - obj_old
-
-            # 新しい状態が優れているか、あるいは確率的に受け入れるかを判断
-            if torch.rand(1).item() < torch.exp(-energy_diff/temp).item():
-                x = new_x
+            # 更新マスク
+            update_mask = score2 < score
     
-            # 温度を下げる（ちょっと実装怪しい）
-            temp = max(final_temp, temp * alpha)
+            # 更新
+            pool[update_mask] = pool2[update_mask]
+            score[update_mask] = score2[update_mask]
+            
+            # スコア記録
+            score_history.append(torch.mean(score).item())
+            
+        # 最後に1フリップ局所探索
+        # 集団まるごと
+        for fm in single_flip_mask:
+            pool2 = pool.clone()
+            pool2[:, fm] = 1. - pool[:, fm]
+            score2 = torch.sum((pool2 @ qmatrix) * pool2, dim=1)
+    
+            # 更新マスク
+            update_mask = score2 < score
+    
+            # 更新
+            pool[update_mask] = pool2[update_mask]
+            score[update_mask] = score2[update_mask]
+            
+        # スコア記録
+        score_history.append(torch.mean(score).item())
 
         # 描画
-        if show == True:
+        if show:
             import matplotlib.pyplot as plt
-            plt.plot(history)
-            
+            plt.plot(range(T_num + 1), score_history)
+            plt.xlabel('Iteration')
+            plt.ylabel('Energy')
+            plt.show()
+        
+        pool = pool.to('cpu').detach().numpy().copy()
+        score = score.to('cpu').detach().numpy().copy()
+        
+        # ----------
         #共通後処理
-        result = get_result(np.array([x.int().tolist()]), np.array([(x@qmatrix@x).item()]), index_map)
+        result = get_result(pool, score, index_map)
+        
         return result
 
+
+
+
+
 if __name__ == "__main__":
+    import time, os, sys
+    from tytan import symbols_list, Compile
     
-    pass
+    size = 24
+    shots = 100
     
+    num_people = size #人の数
+    num_time = size #シフトの時間
+    
+    #量子ビットを用意
+    q = symbols_list([num_people], 'q_{}')
+    
+    #シフト枠
+    shift = np.ones((num_time)) * 2
+    
+    ppl = np.zeros((num_people, num_time))
+    for i in range(num_people//2):
+        ppl[i, i] = 2
+        ppl[i, num_time//2 + i] = 2
+    # choice = [0, 1]
+    # weight = [(num_time-2.0)/num_time, 2.0/num_time]
+    for i in range(num_people//2, num_people):
+        ppl[i] = np.random.randint(0, 2, num_time) * 8.0 / num_time
+        # ppl[i] = np.random.choice(choice, num_time, p=weight)  
+    np.set_printoptions(threshold=np.inf)
+    # print(ppl)
+    
+    # QUBOを作る。それぞれの時間に対して、枠の人数に収まるように変数を格納。
+    H = 0
+    for j in range(num_time):
+        tmp = 0
+        for i in range(num_people):
+            tmp += ppl[i][j] * q[i]
+        H += (tmp - shift[i])**2
+    #print(H)
+    
+    # H = 2*q[0]*q[1] + 1*q[2]*q[3] + 2*q[4] + q[5]
+    
+    #コンパイル
+    s = time.time()
+    qubo, offset = Compile(H).get_qubo()
+    print(f'{round(time.time() - s, 1)} s')
+    
+        
+    #サンプラー選択
+    solver = ArminSampler(seed=None, mode='GPU')
+    #サンプリング
+    s = time.time()
+    result = solver.run(qubo, shots=shots, show=True)
+    
+    #確認
+    tmp = np.zeros((num_people, num_time), int)
+    r = result[0][0]
+    print(result[0][1], result[0][2])
+    for k in r.keys():
+        b = int(r[k])
+        i = int(k.split('_')[1])
+        if b == 1:
+            tmp[i] = ppl[i]
+    #print(tmp)
+    print(np.sum(tmp, axis=0))
+    print(result[0][1] + size*2**2)
+    
+    # suc = (np.sum(tmp, axis=0) == 2).all()
+    suc = abs(result[0][1] + size*2**2) < 0.0001
+    print(f'schedule | {size:03} | {shots:04} | {suc} | {round(time.time() - s, 1)} s | {round(sys.getsizeof(qubo)/1024, 1)} KB |')
     
