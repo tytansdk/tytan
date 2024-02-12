@@ -265,3 +265,25 @@ solver = sampler.NQSSampler(api_key='your_key') #ここか
 result = solver.run(qubo, api_key='your_key') #ここでAPIキーを指定
 ```
 
+## GPUサンプラーの使い方
+これ無料って本当ですか？（商用サンプラーを出している会社から睨まれているらしい）
+
+pytorchは別途インストールする必要があります。
+
+```python
+#サンプラー選択
+solver = sampler.ArminSampler(seed=None, mode='CPU', device='cuda:0', verbose=1)
+#サンプリング
+result = solver.run(qubo, shots=100, T_num=2000, show=False)
+```
+
+mode='CPU'　GPUモードにするには'GPU'<br>
+device='cuda:0'　複数GPUを挿している場合でcuda:1以降を指定したい場合に使用<br>
+verbose=1　繰り返し実行時などでモード表示を出したくなければ0に<br>
+shots=100　サンプリング数<br>
+T_num=2000　フリップ繰り返し数。温度をよりゆっくり下げたければ4000とかに増やす<br>
+show=False　Trueにするとエネルギーの記録がグラフ表示される<br>
+
+GPUモードはshotsを増やしても計算時間があまり増えないのが特徴。shots=10000とか50000とかにできる。
+
+Colabの場合はGPU（T4）を選ぶこと。TPUは非対応。
