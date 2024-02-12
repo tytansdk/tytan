@@ -18,53 +18,47 @@ def replace_function(expression, function, new_function):
             return expression.func(*replaced_args)
 
 
-def degree_leq_2_check(expr):
+def calc_degree(expr):
     """
-    項の次数が2以下かどうか調べる関数
+    項の次数を求める
 
     Args:
-        expr: 項のsymengine表現
+        expr: 評価する式のsymengine表現
     Returns:
-        bool: 次数が2以下かどうか
+        int: 次数
     """
-    # 項が1変数だけならTrue
+    # 項が1変数だけなら1
     if expr.is_Symbol:
-        return True
-    # 項が定数項ならTrue
+        return 1
+    # 項が定数項なら0
     elif expr.is_Number:
-        return True
+        return 0
     # 項がべき乗項のとき
     elif expr.is_Pow:
         # べき乗項に含まれる要素数が2より大きかったらFalse
-        if len(expr.args) > 2:
-            return False
-        else:  # べき乗項が x^yで表されるとき
-            base, exp = expr.args
-            # 底が変数で指数が定数のとき
-            if base.is_Symbol and exp.is_Number:
-                # 指数が2以下ならTrue
-                if int(exp) <= 2:
-                    return True
-                # 指数が3以上のときはFalse
-                return False
-            else:  # 指数が変数である場合などはFalse
-                return False
+        base, exp = expr.args
+        if base.is_Symbol and exp.is_Number:
+            if int(exp) == exp and exp >= 1:
+                return exp  # 変数^Nの場合はNを返す(Nは整数で1以上)
+            else:
+                return None
+        # 指数に変数が入る場合は定義しない
+        # (expがNumberでない時点で指数に変数が入っていることが確定する)
+        return None
+    elif expr.is_Add:
+        return max(calc_degree(arg) for arg in expr.args
+                   if calc_degree(arg) is not None)
     # 項が乗法のとき
     elif expr.is_Mul:
-        # 要素数が3より大きい場合はFalse
-        if len(expr.args) > 3:
-            return False
-        # 要素数が2以下ならTrue
-        elif len(expr.args) <= 2:
-            return True
-        # 以下は要素数が3つの時
-        # 3つすべてが変数の場合
-        if all([arg.is_Symbol for arg in expr.args]):
-            return False
-        else:
-            return True
-    # 変数、定数、べき乗、乗法でないときFalse
-    return False
+        total_degree = 0
+        for arg in expr.args:
+            degree = calc_degree(arg)
+            if degree is None:
+                return None
+            total_degree += degree
+        return total_degree
+    # 項が変数、定数、べき乗、乗法でないときはサポートしない
+    return None
 
 
 class Compile:
@@ -94,7 +88,7 @@ class Compile:
                     offset += float(term)
                     continue
 
-                if not degree_leq_2_check(term):  # 次数が2より大きい場合はエラー
+                if calc_degree(term) is None or calc_degree(term) > 2:  # 次数が2より大きい場合はエラー
                     raise Exception(f'Error! The highest order of the constraint must be within 2.')
 
             #二乗項を一乗項に変換
