@@ -1,5 +1,6 @@
 import numpy as np
 import itertools
+import inspect
 from symengine import symbols as symengine_symbols
 
 """
@@ -15,6 +16,20 @@ def symbols(passed_txt):
 リストでまとめて定義する関数
 """
 def symbols_list(shape, format_txt=None):
+    #呼び出し側で代入しようとしている変数名を検出（ChatGPTによる謎の技術）
+    frame = inspect.currentframe()
+    try:
+        frame = frame.f_back
+        code = frame.f_code
+        calling_line = frame.f_lineno
+        with open(code.co_filename, 'r', encoding='utf-8') as f:  # UTF-8でファイルを開く
+            lines = f.readlines()
+            calling_code = lines[calling_line - 1].strip()
+        variable_name = calling_code.split('=')[0].strip()
+    finally:
+        del frame
+    #print(variable_name)
+    
     #単一intの場合
     if type(shape) == int:
         shape = [shape]
@@ -23,15 +38,15 @@ def symbols_list(shape, format_txt=None):
     #フォーマットがなければ自動作成
     if format_txt == None:
         if len(shape) == 1:
-            format_txt = 'q{}'
+            format_txt = f'{variable_name}' + '{}'
         if len(shape) == 2:
-            format_txt = 'q{}_{}'
+            format_txt = f'{variable_name}' + '{}_{}'
         if len(shape) == 3:
-            format_txt = 'q{}_{}_{}'
+            format_txt = f'{variable_name}' + '{}_{}_{}'
         if len(shape) == 4:
-            format_txt = 'q{}_{}_{}_{}'
+            format_txt = f'{variable_name}' + '{}_{}_{}_{}'
         if len(shape) == 5:
-            format_txt = 'q{}_{}_{}_{}_{}'
+            format_txt = f'{variable_name}' + '{}_{}_{}_{}_{}'
 
     #次元チェック
     dim = len(shape)
@@ -102,7 +117,7 @@ def symbols_list(shape, format_txt=None):
 個別定義用のコマンドを返す関数
 exec(command)して定義
 """
-def symbols_define(shape, format_txt=None):
+def symbols_define(shape, format_txt):
     #単一intの場合
     if type(shape) == int:
         shape = [shape]
@@ -175,7 +190,25 @@ def symbols_define(shape, format_txt=None):
     # print(f'defined global : {first_command} to {final_command}')
 
 
-def symbols_nbit(start, stop, format_txt, num=8):
+def symbols_nbit(start, stop, format_txt=None, num=8):
+    #呼び出し側で代入しようとしている変数名を検出（ChatGPTによる謎の技術）
+    frame = inspect.currentframe()
+    try:
+        frame = frame.f_back
+        code = frame.f_code
+        calling_line = frame.f_lineno
+        with open(code.co_filename, 'r', encoding='utf-8') as f:  # UTF-8でファイルを開く
+            lines = f.readlines()
+            calling_code = lines[calling_line - 1].strip()
+        variable_name = calling_code.split('=')[0].strip()
+    finally:
+        del frame
+    #print(variable_name)
+    
+    #フォーマットがなければ自動作成
+    if format_txt == None:
+        format_txt = f'{variable_name}' + '{}'
+    
     #生成
     q = symbols_list(num, format_txt=format_txt)
 
