@@ -1,5 +1,7 @@
 ## 最新情報
 
+2024/02/18 symbols_list, symbols_define, symbols_nbitを修正しました
+
 2024/02/12 GPUで高速サンプリングができるArminSamplerが追加されました
 
 2024/01/12 Compile()を100～300倍に高速化しました（derwind様提供）
@@ -165,6 +167,7 @@ TYTANは商用利用前提ですので、個人での利用はもちろん企業
 ## 更新履歴
 |日付|ver|内容|
 |:---|:---|:---|
+|2024/02/18|0.0.24|symbols_list, symbols_define, symbols_nbitに関する修正|
 |2024/02/13|0.0.23|ArminSamplerのデフォルトをGPUモードに, mps対応|
 |2024/02/12|0.0.22|ArminSampler追加|
 |2024/01/12|0.0.20|Compile高速化|
@@ -183,5 +186,4 @@ TYTANは商用利用前提ですので、個人での利用はもちろん企業
 |2023/03/28||SASampler高速化|
 |2023/03/22||GASampler追加|
 |2023/03/15||初期版|
-
 
