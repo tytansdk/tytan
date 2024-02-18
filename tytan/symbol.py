@@ -10,52 +10,30 @@ importをTYTANだけにするための申し訳ない方策
 def symbols(passed_txt):
     return symengine_symbols(passed_txt)
 
-
+class TytanException(Exception):
+    pass
 
 """
 リストでまとめて定義する関数
 """
-def symbols_list(shape, format_txt=None):
-    #呼び出し側で代入しようとしている変数名を検出（ChatGPTによる謎の技術）
-    frame = inspect.currentframe()
-    try:
-        frame = frame.f_back
-        code = frame.f_code
-        calling_line = frame.f_lineno
-        with open(code.co_filename, 'r', encoding='utf-8') as f:  # UTF-8でファイルを開く
-            lines = f.readlines()
-            calling_code = lines[calling_line - 1].strip()
-        variable_name = calling_code.split('=')[0].strip()
-    finally:
-        del frame
-    #print(variable_name)
-    
+def symbols_list(shape, format_txt):
     #単一intの場合
     if type(shape) == int:
         shape = [shape]
     #print(shape)
 
-    #フォーマットがなければ自動作成
-    if format_txt == None:
-        if len(shape) == 1:
-            format_txt = f'{variable_name}' + '{}'
-        if len(shape) == 2:
-            format_txt = f'{variable_name}' + '{}_{}'
-        if len(shape) == 3:
-            format_txt = f'{variable_name}' + '{}_{}_{}'
-        if len(shape) == 4:
-            format_txt = f'{variable_name}' + '{}_{}_{}_{}'
-        if len(shape) == 5:
-            format_txt = f'{variable_name}' + '{}_{}_{}_{}_{}'
-
     #次元チェック
     dim = len(shape)
     if dim != format_txt.count('{}'):
-        raise
+        raise TytanException("specify format option like format_txt=\'q{}_{}\' as dimension")
+    
+    #{}のセパレートチェック
+    if '}{' in format_txt:
+        raise TytanException("separate {} in format_txt like format_txt=\'q{}_{}\'")
 
     #次元が1～5でなければエラー
     if dim not in [1, 2, 3, 4, 5]:
-        raise
+        raise TytanException("Currently only dim<=5 is available. Ask tytan community.")
 
     #次元で分岐、面倒なのでとりあえずこれで5次元まで対応したこととする
     if dim == 1:
@@ -123,27 +101,18 @@ def symbols_define(shape, format_txt):
         shape = [shape]
     #print(shape)
 
-    #フォーマットがなければ自動作成
-    if format_txt == None:
-        if len(shape) == 1:
-            format_txt = 'q{}'
-        if len(shape) == 2:
-            format_txt = 'q{}_{}'
-        if len(shape) == 3:
-            format_txt = 'q{}_{}_{}'
-        if len(shape) == 4:
-            format_txt = 'q{}_{}_{}_{}'
-        if len(shape) == 5:
-            format_txt = 'q{}_{}_{}_{}_{}'
-
     #次元チェック
     dim = len(shape)
     if dim != format_txt.count('{}'):
-        raise
+        raise TytanException("specify format option like format_txt=\'q{}_{}\' as dimension")
+    
+    #{}のセパレートチェック
+    if '}{' in format_txt:
+        raise TytanException("separate {} in format_txt like format_txt=\'q{}_{}\'")
 
     #次元が1～5でなければエラー
     if dim not in [1, 2, 3, 4, 5]:
-        raise
+        raise TytanException("Currently only dim<=5 is available. Ask tytan community.")
 
     #次元で分岐、面倒なのでとりあえずこれで5次元まで対応したこととする
     ret = ''
@@ -190,24 +159,10 @@ def symbols_define(shape, format_txt):
     # print(f'defined global : {first_command} to {final_command}')
 
 
-def symbols_nbit(start, stop, format_txt=None, num=8):
-    #呼び出し側で代入しようとしている変数名を検出（ChatGPTによる謎の技術）
-    frame = inspect.currentframe()
-    try:
-        frame = frame.f_back
-        code = frame.f_code
-        calling_line = frame.f_lineno
-        with open(code.co_filename, 'r', encoding='utf-8') as f:  # UTF-8でファイルを開く
-            lines = f.readlines()
-            calling_code = lines[calling_line - 1].strip()
-        variable_name = calling_code.split('=')[0].strip()
-    finally:
-        del frame
-    #print(variable_name)
-    
-    #フォーマットがなければ自動作成
-    if format_txt == None:
-        format_txt = f'{variable_name}' + '{}'
+def symbols_nbit(start, stop, format_txt, num=8):
+    #次元チェック
+    if 1 != format_txt.count('{}'):
+        raise TytanException("specify format option like format_txt=\'q{}\' and should be one dimension.")
     
     #生成
     q = symbols_list(num, format_txt=format_txt)
