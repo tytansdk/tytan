@@ -356,7 +356,7 @@ class TestCompile(unittest.TestCase):
         numbers = np.array([15, 25, 33, 41, 64, 82])
 
         #QUBO変数を用意する→[0, 1]の変数
-        q = symbols_list(6)
+        q = symbols_list(6, 'q{}')
 
         #まとめてイジング変数に変換→[-1, +1]の変数
         z = 2*q - 1
