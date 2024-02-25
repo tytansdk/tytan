@@ -1,5 +1,7 @@
 ## 最新情報
 
+2024/02/25 ワンホット制約に強いPieckSampler（GPU対応）が試験的に追加されました
+
 2024/02/18 symbols_list, symbols_define, symbols_nbitを修正しました
 
 2024/02/12 GPUで高速サンプリングができるArminSamplerが追加されました
@@ -167,6 +169,7 @@ TYTANは商用利用前提ですので、個人での利用はもちろん企業
 ## 更新履歴
 |日付|ver|内容|
 |:---|:---|:---|
+|2024/02/25|0.0.27|PieckSampler追加（試験的）|
 |2024/02/20|0.0.26|mps対応の修正|
 |2024/02/18|0.0.25|symbols_list, symbols_define, symbols_nbitに関する修正|
 |2024/02/13|0.0.23|ArminSamplerのデフォルトをGPUモードに, mps対応|
