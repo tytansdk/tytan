@@ -1,8 +1,12 @@
+import os
 import sys
 import time
+import requests
+import itertools
 import numpy as np
 import numpy.random as nr
-import itertools
+from copy import deepcopy
+from importlib import util
 
 #共通前処理
 """

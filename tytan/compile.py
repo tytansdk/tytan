@@ -1,8 +1,11 @@
 import re
+import os
+import requests
 import symengine
 import numpy as np
 import pandas as pd
 from sympy import Rational
+from importlib import util
 
 
 def replace_function(expression, function, new_function):
