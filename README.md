@@ -1,12 +1,10 @@
-## 最新情報
+## 最近のアップデート情報
 
-2024/02/25 ワンホット制約に強いPieckSampler（GPU対応）が試験的に追加されました
+★ワンホット制約に強いPieckSampler（GPU対応）が試験的に追加されました
 
-2024/02/18 symbols_list, symbols_define, symbols_nbitを修正しました
+★GPUで高速サンプリングができるArminSamplerが追加されました
 
-2024/02/12 GPUで高速サンプリングができるArminSamplerが追加されました
-
-2024/01/12 Compile()を100～300倍に高速化しました（derwind様提供）
+★Compile()を100～300倍に高速化しました（derwind様提供）
 
 全ての関数については [ドキュメント](https://github.com/tytansdk/tytan/blob/main/document%20.md) をご覧ください。
 
@@ -175,6 +173,7 @@ TYTANは商用利用前提ですので、個人での利用はもちろん企業
 ## 更新履歴
 |日付|ver|内容|
 |:---|:---|:---|
+|2024/03/07|0.0.28|numpyのバージョン指定を解除|
 |2024/02/25|0.0.27|PieckSampler追加（試験的）|
 |2024/02/20|0.0.26|mps対応の修正|
 |2024/02/18|0.0.25|symbols_list, symbols_define, symbols_nbitに関する修正|
