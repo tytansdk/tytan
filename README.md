@@ -92,7 +92,7 @@ for r in result:
 from tytan import *
 
 #量子ビットを用意（まとめて定義）
-q = symbols_list([3, 3])
+q = symbols_list([3, 3], 'q{}_{}')
 print(q)
 
 #各行に1つだけ1
