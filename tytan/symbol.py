@@ -35,57 +35,13 @@ def symbols_list(shape, format_txt):
     if dim not in [1, 2, 3, 4, 5]:
         raise TytanException("Currently only dim<=5 is available. Ask tytan community.")
 
-    #次元で分岐、面倒なのでとりあえずこれで5次元まで対応したこととする
-    if dim == 1:
-        q = []
-        for i in range(shape[0]):
-            q.append(symbols(format_txt.format(i)))
-    elif dim == 2:
-        q = []
-        for i in range(shape[0]):
-            tmp1 = []
-            for j in range(shape[1]):
-                tmp1.append(symbols(format_txt.format(i, j)))
-            q.append(tmp1)
-    elif dim == 3:
-        q = []
-        for i in range(shape[0]):
-            tmp1 = []
-            for j in range(shape[1]):
-                tmp2 = []
-                for k in range(shape[2]):
-                    tmp2.append(symbols(format_txt.format(i, j, k)))
-                tmp1.append(tmp2)
-            q.append(tmp1)
-    elif dim == 4:
-        q = []
-        for i in range(shape[0]):
-            tmp1 = []
-            for j in range(shape[1]):
-                tmp2 = []
-                for k in range(shape[2]):
-                    tmp3 = []
-                    for l in range(shape[3]):
-                        tmp3.append(symbols(format_txt.format(i, j, k, l)))
-                    tmp2.append(tmp3)
-                tmp1.append(tmp2)
-            q.append(tmp1)
-    elif dim == 5:
-        q = []
-        for i in range(shape[0]):
-            tmp1 = []
-            for j in range(shape[1]):
-                tmp2 = []
-                for k in range(shape[2]):
-                    tmp3 = []
-                    for l in range(shape[3]):
-                        tmp4 = []
-                        for m in range(shape[4]):
-                            tmp4.append(symbols(format_txt.format(i, j, k, l, m)))
-                        tmp3.append(tmp4)
-                    tmp2.append(tmp3)
-                tmp1.append(tmp2)
-            q.append(tmp1)
+    #再帰的にシンボルを作成する
+    def recursive_create(indices):
+        if len(indices) == dim:
+            return symbols(format_txt.format(*indices))
+        else:
+            return [recursive_create(indices + [i]) for i in range(shape[len(indices)])]
+    q = recursive_create([])
 
     return np.array(q)
 
@@ -114,49 +70,23 @@ def symbols_define(shape, format_txt):
     if dim not in [1, 2, 3, 4, 5]:
         raise TytanException("Currently only dim<=5 is available. Ask tytan community.")
 
-    #次元で分岐、面倒なのでとりあえずこれで5次元まで対応したこととする
-    ret = ''
-    command1 = f'{format_txt} = symbols(\'{format_txt}\')'
-    if dim == 1:
-        for i in range(shape[0]):
-            command2 = eval('command1').format(i, i)
-            ret += command2 + '\r\n'
-    elif dim == 2:
-        for i, j in itertools.product(range(shape[0]), range(shape[1])):
-            command2 = eval('command1').format(i, j, i, j)
-            ret += command2 + '\r\n'
-    elif dim == 3:
-        for i, j, k in itertools.product(range(shape[0]), range(shape[1]), range(shape[2])):
-            command2 = eval('command1').format(i, j, k, i, j, k)
-            ret += command2 + '\r\n'
-    elif dim == 4:
-        for i, j, k, l in itertools.product(range(shape[0]), range(shape[1]), range(shape[2]), range(shape[3])):
-            command2 = eval('command1').format(i, j, k, l, i, j, k, l)
-            ret += command2 + '\r\n'
-    elif dim == 5:
-        for i, j, k, l, m in itertools.product(range(shape[0]), range(shape[1]), range(shape[2]), range(shape[3]), range(shape[4])):
-            command2 = eval('command1').format(i, j, k, l, m, i, j, k, l, m)
-            ret += command2 + '\r\n'
+    #再帰的に定義を作成する
+    command = f"{format_txt} = symbols('{format_txt}')"
+    def recursive_create(indices):
+        if len(indices) == dim:
+            return command.format(*indices, *indices) + "\r\n"
+        else:
+            return "".join(recursive_create(indices + [i]) for i in range(shape[len(indices)]))
+    ret = recursive_create([])
 
     return ret[:-2]
 
     # #表示用
-    # if dim == 1:
-    #     first_command =eval('command1').format(0, 0)
-    #     final_command = eval('command1').format(shape[0]-1, shape[0]-1)
-    # elif dim == 2:
-    #     first_command =eval('command1').format(0, 0, 0, 0)
-    #     final_command = eval('command1').format(shape[0]-1, shape[1]-1, shape[0]-1, shape[1]-1)
-    # elif dim == 3:
-    #     first_command =eval('command1').format(0, 0, 0, 0, 0, 0)
-    #     final_command = eval('command1').format(shape[0]-1, shape[1]-1, shape[2]-1, shape[0]-1, shape[1]-1, shape[2]-1)
-    # elif dim == 4:
-    #     first_command =eval('command1').format(0, 0, 0, 0, 0, 0, 0, 0)
-    #     final_command = eval('command1').format(shape[0]-1, shape[1]-1, shape[2]-1, shape[3]-1, shape[0]-1, shape[1]-1, shape[2]-1, shape[3]-1)
-    # elif dim == 5:
-    #     first_command =eval('command1').format(0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-    #     final_command = eval('command1').format(shape[0]-1, shape[1]-1, shape[2]-1, shape[3]-1, shape[4]-1, shape[0]-1, shape[1]-1, shape[2]-1, shape[3]-1, shape[4]-1)
-    # print(f'defined global : {first_command} to {final_command}')
+    # start_indices = [0] * dim
+    # end_indices = [s - 1 for s in shape]
+    # first_command = command.format(*start_indices, *start_indices)
+    # final_command = command.format(*end_indices, *end_indices)
+    # print(f'defined global: {first_command} to {final_command}')
 
 
 def symbols_nbit(start, stop, format_txt, num=8):
