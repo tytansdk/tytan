@@ -1,5 +1,7 @@
 ## 最近のアップデート情報
 
+★3次以上の項に対応したHOBOTANが統合されました。高次はget_hobo()とMIKASAmpler()を使用してください
+
 ★GPUで高速サンプリングができるArminSamplerが追加されました
 
 ★Compile()を100～300倍に高速化しました（derwind様提供）
@@ -19,23 +21,24 @@ QUBOを共通の入力形式とし、複数のサンプラーから選んでア�
 
 結果を自動で多次元配列に変換する機能を搭載。短いコードで確認できます。詳しくは [ドキュメント](https://github.com/tytansdk/tytan/blob/main/document%20.md) を参照ください。
 
-## サンプラーと問題サイズ
+## サンプラー
 基本的なローカルサンプラーの他、外部のAPIサンプラーなどを組み込めるようにしています。組み込みたソルバーがあればご連絡ください。
 
-ローカルCPUサンプラー：100量子ビット程度まで
+QUBO（2次までの式）で使えるサンプラー
 ```
-SASampler
-GASampler
+SASampler　：　ローカルCPU　★100量子ビットまではこれがおすすめ
+GASampler　：　ローカルCPU
+ArminSampler　：　ローカルCPU/GPU　★100量子ビット以上はこれがおすすめ
+PieckSampler　：　ローカルCPU/GPU
+ZekeSampler　：　商用クラウドサンプラー
+NQSSampler　：　商用クラウドサンプラー
 ```
-ローカルGPUサンプラー：100-1,000量子ビット程度
+
+HOBO（3次以上の式）で使えるサンプラー
 ```
-ArminSampler
-PieckSampler
-```
-商用クラウドサンプラー：1,000-100,000量子ビット程度
-```
-ZekeSampler
-NQSSampler
+SASampler　：　ローカルCPU　★100量子ビットまではこれがおすすめ
+ArminSampler　：　ローカルCPU/GPU
+MIKASAmpler　：　ローカルCPU/GPU　★100量子ビット以上はこれがおすすめ
 ```
 
 
@@ -165,12 +168,101 @@ get_image
 <img src="https://github.com/tytansdk/tytan/blob/main/img/img-01.png" width="%">
 
 
+## サンプルコード３
+3次以上の項を含む場合はQUBOではなくHOBOと呼ばれます。
+
+事故を防ぐためコンパイル関数はQUBO用と区別しています。get_hobo()を使用してください。
+
+サンプリング関数はArminSampler()でもMIKASAmpler()でもOK、中身同じです。区別したい方はQUBO:ArminSampler(), HOBO:MIKASAmpler()がおすすめ。
+
+以下のコードは、5✕5の席にできるだけ多くの生徒を座らせる（ただし縦・横に3席連続で座ってはいけない）を解いたもの。
+
+```python
+import numpy as np
+from tytan import *
+import matplotlib.pyplot as plt
+
+#量子ビットを用意
+q = symbols_list([5, 5], 'q{}_{}')
+
+#すべての席に座りたい（できれば）
+H1 = 0
+for i in range(5):
+    for j in range(5):
+        H1 += - q[i, j]
+
+#どの直線に並ぶ3席も連続で座ってはいけない（絶対）
+H2 = 0
+for i in range(5):
+    for j in range(5 - 3 + 1):
+        H2 += np.prod(q[i, j:j+3])
+for j in range(5):
+    for i in range(5 - 3 + 1):
+        H2 += np.prod(q[i:i+3, j])
+
+#式の合体
+H = H1 + 10*H2
+
+#HOBOテンソルにコンパイル
+hobo, offset = Compile(H).get_hobo()
+print(f'offset\n{offset}')
+
+#サンプラー選択
+solver = sampler.MIKASAmpler()
+
+#サンプリング
+result = solver.run(hobo, shots=10000)
+
+#上位3件
+for r in result[:3]:
+    print(f'Energy {r[1]}, Occurrence {r[2]}')
+
+    #さくっと配列に
+    arr, subs = Auto_array(r[0]).get_ndarray('q{}_{}')
+    print(arr)
+
+    #さくっと画像に
+    img, subs = Auto_array(r[0]).get_image('q{}_{}')
+    plt.figure(figsize=(2, 2))
+    plt.imshow(img)
+    plt.show()
+```
+```
+offset
+0
+MODE: GPU
+DEVICE: cuda:0
+Energy -17.0, Occurrence 686
+[[1 1 0 1 1]
+ [1 1 0 1 1]
+ [0 0 1 0 0]
+ [1 1 0 1 1]
+ [1 1 0 1 1]]
+Energy -17.0, Occurrence 622
+[[1 1 0 1 1]
+ [1 0 1 1 0]
+ [0 1 1 0 1]
+ [1 1 0 1 1]
+ [1 0 1 1 0]]
+Energy -17.0, Occurrence 496
+[[0 1 1 0 1]
+ [1 1 0 1 1]
+ [1 0 1 1 0]
+ [0 1 1 0 1]
+ [1 1 0 1 1]]
+```
+<img src="https://github.com/ShoyaYasuda/hobotan/blob/main/img/img1.png" width="%">
+<img src="https://github.com/ShoyaYasuda/hobotan/blob/main/img/img2.png" width="%">
+<img src="https://github.com/ShoyaYasuda/hobotan/blob/main/img/img3.png" width="%">
+
+
 ## 商用利用OK
 TYTANは商用利用前提ですので、個人での利用はもちろん企業での活用を促進しています。
 
 ## 更新履歴
 |日付|ver|内容|
 |:---|:---|:---|
+|2024/08/12|0.1.0|HOBOTANを統合したメジャーアップデート|
 |2024/08/12|0.0.30|Compile時の次数チェックの修正および高速化|
 |2024/08/11|0.0.29|symbols_list, symbols_define関数をリファクタリング|
 |2024/03/07|0.0.28|numpyのバージョン指定を解除|
