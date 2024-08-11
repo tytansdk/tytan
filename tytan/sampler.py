@@ -184,10 +184,14 @@ class GASampler:
         self.max_count = 3
         self.seed = seed
 
-    def run(self, qubo, shots=100, verbose=True):
-        #共通前処理
-        qmatrix, index_map, N = get_matrix(qubo)
-        #print(qmatrix)
+    def run(self, qubomix, shots=100, verbose=True):
+        #解除
+        qmatrix, index_map = qubomix
+        # print(index_map)
+        
+        #matrixサイズ
+        N = len(qmatrix)
+        # print(N)
         
         #シード固定
         nr.seed(self.seed)
@@ -305,43 +309,28 @@ class ZekeSampler:
         path = "tasks/create"
         return self.post_request(path, body, api_key)
     
-    def run(self, qubo, shots=100, api_key: Optional[str] = None):
-        # 重複なしに要素を抽出
-        keys = list(set(k for tup in qubo.keys() for k in tup))
-        # print(keys)
-        
-        # 抽出した要素のindexマップを作成
-        index_map = {k: v for v, k in enumerate(keys)}
+    def run(self, qubomix, shots=100, api_key: Optional[str] = None):
+        #解除
+        qmatrix, index_map = qubomix
         # print(index_map)
         
-        # 上記のindexマップを利用してタプルの内容をindexで書き換え
-        qubo_index = {(index_map[k[0]], index_map[k[1]]): v for k, v in qubo.items()}
-        # print(qubo_index)
-        
-        # タプル内をソート
-        qubo_sorted = {
-            tuple(sorted(k)): v
-            for k, v in sorted(qubo_index.items(), key=lambda x: x[1])
-        }
-        # print(qubo_sorted)
+        #
+        keys = index_map.keys()
+        # print(keys)
         
         # 量子ビット数
-        N = int(len(keys))
-        
-        # QUBO matrix 初期化
-        qmatrix = np.zeros((N, N))
+        N = int(len(qmatrix))
         
         quadratic_biases = []
         quadratic_head = []
         quadratic_tail = []
         
-        for (i, j), value in qubo_sorted.items():
-            qmatrix[i, j] = value
-
-            if i != j:
-                quadratic_biases.append(float(value))
-                quadratic_head.append(i)
-                quadratic_tail.append(j)
+        for i in range(N):
+            for j in range(i + 1, N):
+                if i != j:
+                    quadratic_biases.append(float(qmatrix[i, j]))
+                    quadratic_head.append(i)
+                    quadratic_tail.append(j)
 
         variable_labels = keys
         linear_biases = np.diag(qmatrix)
@@ -428,7 +417,7 @@ class NQSSampler:
 
     def run(
         self,
-        qubo: dict,
+        qmatrix: list,
         time_limit_sec: Optional[int] = 30,
         iter: Optional[int] = 10000,
         population: Optional[int] = 500,
@@ -442,9 +431,13 @@ class NQSSampler:
         import io
         import zipfile
         
-        #共通前処理
-        qmatrix, index_map, N = get_matrix(qubo)
-        # print(qmatrix)
+        #解除
+        qmatrix, index_map = qubomix
+        # print(index_map)
+        
+        #matrixサイズ
+        N = len(qmatrix)
+        # print(N)
         
         #1行目、1列目にビット名を合体
         tmp = np.zeros((len(qmatrix)+1, len(qmatrix[0])+1), object)
@@ -540,7 +533,7 @@ class NQSLocalSampler:
 
     def run(
         self,
-        qubo: dict,
+        qubomix: list,
         time_limit_sec: Optional[int] = 30,
         iter: Optional[int] = 10000,
         population: Optional[int] = 500,
@@ -553,9 +546,13 @@ class NQSLocalSampler:
         import io
         import zipfile
         
-        #共通前処理
-        qmatrix, index_map, N = get_matrix(qubo)
-        # print(qmatrix)
+        #解除
+        qmatrix, index_map = qubomix
+        # print(index_map)
+        
+        #matrixサイズ
+        N = len(qmatrix)
+        # print(N)
         
         #1行目、1列目にビット名を合体
         tmp = np.zeros((len(qmatrix)+1, len(qmatrix[0])+1), object)
