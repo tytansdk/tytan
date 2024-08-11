@@ -417,7 +417,7 @@ class NQSSampler:
 
     def run(
         self,
-        qmatrix: list,
+        qubomix: list,
         time_limit_sec: Optional[int] = 30,
         iter: Optional[int] = 10000,
         population: Optional[int] = 500,
