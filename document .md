@@ -34,7 +34,7 @@ q = [symbols(f'q{i}') for i in range(5)] #[q0, q1, q2, q3, q4]
 また、1次元～多次元の量子ビットを一度に定義できる関数が2種類あります。
 
 文字シンボルを配列に定義する場合、次のようにndarray配列を得ます。
-第2引数は省略するとデフォルトの添字形式になります。
+第2引数は省略できません！（2024/02/18修正より）
 ```python
 q = symbols_list([3, 3], 'q{}_{}')
 print(q)
@@ -47,7 +47,7 @@ print(q)
 
 文字シンボルを個別に定義する場合、次のように実行コマンドテキスト得てからexec()で実行します。
 この方法では、IDEによっては後に構文警告（文字が未定義です）が表示されることがあります。
-第2引数は省略するとデフォルトの添字形式になります。
+第2引数は省略できません！（2024/02/18修正より）
 ```python
 command = symbols_define([3, 3], 'q{}_{}')
 print(command)
@@ -92,7 +92,7 @@ result = solver.run(qubo, shots=100)
 ```
 
 ▼サンプラー一覧<br>
-ローカルサンプラー：1,000量子ビット程度まで
+ローカルCPUサンプラー：100量子ビット程度まで
 ```python
 #SAサンプラー
 solver = sampler.SASampler(seed=None)
@@ -103,6 +103,18 @@ result = solver.run(qubo, shots=100)
 solver = sampler.GASampler(seed=None)
 result = solver.run(qubo, shots=100)
 ```
+ローカルGPUサンプラー：100-1,000量子ビット程度
+```python
+#高速GPUサンプラー
+solver = sampler.ArminSampler(seed=None)
+result = solver.run(qubo, shots=100)
+```
+```python
+#対ワンホット高速GPUサンプラー
+solver = sampler.PieckSampler(seed=None) #コンパイルも特殊なので注意
+result = solver.run(qubo, shots=100)
+```
+
 商用クラウドサンプラー：1,000-100,000量子ビット程度　※要詳細
 ```python
 ZekeSampler()
@@ -265,3 +277,39 @@ solver = sampler.NQSSampler(api_key='your_key') #ここか
 result = solver.run(qubo, api_key='your_key') #ここでAPIキーを指定
 ```
 
+## GPUサンプラーの使い方１
+これ無料って本当ですか？（商用サンプラーを出している会社から睨まれているらしい）
+
+pytorchは別途インストールする必要があります。
+
+```python
+#サンプラー選択
+solver = sampler.ArminSampler(seed=None, mode='GPU', device='cuda:0', verbose=1)
+#サンプリング
+result = solver.run(qubo, shots=100, T_num=2000, show=False)
+```
+
+mode='GPU'　CPUモードにするには'CPU'<br>
+device='cuda:0'　複数GPUを挿している場合でcuda:1以降を指定したい場合に使用。Macの'mps:0'とかもここ<br>
+verbose=1　繰り返し実行時などでモード表示を出したくなければ0に<br>
+shots=100　サンプリング数<br>
+T_num=2000　フリップ繰り返し数。温度をよりゆっくり下げたければ4000とかに増やす<br>
+show=False　Trueにするとエネルギーの記録がグラフ表示される<br>
+
+GPUモードはshotsを増やしても計算時間があまり増えないのが特徴。shots=10000とか50000とかにできる。
+
+Colabの場合はGPU（T4）を選ぶこと。TPUは非対応。
+
+## GPUサンプラーの使い方２
+こちらもなんと無料。ArminSamplerをさらにワンホット制約に強くしたもの。PieckCompile()とセットで使う必要あり。
+
+```python
+#コンパイル
+qubo, offset = PieckCompile(H).get_qubo()
+#サンプラー選択
+solver = sampler.PieckSampler(seed=None, mode='GPU', device='cuda:0', verbose=1)
+#サンプリング
+result = solver.run(qubo, shots=100, T_num=2000, show=False)
+```
+
+1次元ワンホット群をもつ問題において大幅に改善される。2次元以上のワンホット群に対しては1次元分しか対応されないので改善してもなお無理が残る。何を言っているか分からないと思うが数独は3次元ワンホットなので全然ダメ。使い方はPieckSamplerで検索して出てくるブログを参照。

