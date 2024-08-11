@@ -13,7 +13,9 @@ def are_same_qubo_matrices(qubo1, qubo2):
     qubo1 = np.array(qubo1, float)
     qubo2 = np.array(qubo2, float)
     
-    if np.all((qubo1 - qubo2) == 0):
+    eps = 1e-9
+    
+    if np.sum(qubo1 - qubo2) < eps:
         return True
     else:
         return False
