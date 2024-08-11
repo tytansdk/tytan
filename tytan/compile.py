@@ -1,9 +1,10 @@
 import re
-import os
 import requests
 import symengine
 import numpy as np
 import pandas as pd
+from sympy import Rational
+from importlib import util
 
 def replace_function(expression, function, new_function):
     if expression.is_Atom:
@@ -72,23 +73,22 @@ class Compile:
         Raises:
             TypeError: Input type is symengine, numpy or pandas.
         Returns:
-            Tuple: qubo is dict. offset is float.
+            [qubo, index_map], offset. qubo is numpy matrix.
         """
-
         #symengine型のサブクラス
         if 'symengine.lib' in str(type(self.expr)):
             #式を展開して同類項をまとめる
             expr = symengine.expand(self.expr)
+            
             #最高字数を調べながらオフセットを記録
             #項に分解
             offset = 0
             for term in expr.args:
-
                 # 定数項はオフセットに追加
                 if term.is_Number:
                     offset += float(term)
                     continue
-
+                
                 if calc_degree(term) is None or calc_degree(term) > 2:  # 次数が2より大きい場合はエラー
                     raise Exception(f'Error! The highest order of the constraint must be within 2.')
 
@@ -97,35 +97,82 @@ class Compile:
 
             #もう一度同類項をまとめる
             expr = symengine.expand(expr)
-
+            
+            
             #文字と係数の辞書
             coeff_dict = expr.as_coefficients_dict()
-
-            #QUBO
-            qubo = {}
+            # print(coeff_dict)
+            
+            #定数項を消す　{1: 25} 必ずある
+            del coeff_dict[1]
+            # print(coeff_dict)
+            
+            #シンボル対応表
+            # 重複なしにシンボルを抽出
+            keys = list(set(sum([str(key).split('*') for key in coeff_dict.keys()], [])))
+            # print(keys)
+            
+            # 要素のソート（ただしアルファベットソート）
+            keys.sort()
+            # print(keys)
+            
+            # シンボルにindexを対応させる
+            index_map = {key:i for i, key in enumerate(keys)}
+            # print(index_map)
+            
+            #量子ビット数
+            num = len(index_map)
+            # print(num)
+            
+            #QUBO行列生成（HOBO行列作成と同じ内容になった、旧版は0.0.30参照）
+            qubo = np.zeros(num ** 2, dtype=float).reshape([num] * 2)
             for key, value in coeff_dict.items():
-                #定数項はパス
-                if key.is_Number:
-                    continue
-                tmp = str(key).split('*')
-                #tmp = ['q0'], ['q0', 'q1']のどちらかになっていることを利用
-                qubo[(tmp[0], tmp[-1])] = float(value)
+                qnames = str(key).split('*')
+                indices = sorted([index_map[qname] for qname in qnames])
+                indices = [indices[0]] * (2 - len(indices)) + indices
+                qubo[tuple(indices)] = float(value)
 
-            return qubo, offset
+            return [qubo, index_map], offset
 
         # numpy
         elif isinstance(self.expr, np.ndarray):
             # 係数
             offset = 0
 
-            # QUBOに格納開始
+            # 辞書に格納
             qubo = {}
             for i, r in enumerate(self.expr):
                 for j, c in enumerate(r):
                     if i <= j:
                         qubo[(f"q{i}", f"q{j}")] = c
+            
+            # 重複なしにシンボルを抽出
+            keys = list(set(key for keypair in qubo.keys() for key in keypair))
+            #print(keys)
+            
+            # 要素のソート（ただしアルファベットソート）
+            keys.sort()
+            #print(keys)
+            
+            # シンボルにindexを対応させる
+            index_map = {key:i for i, key in enumerate(keys)}
+            #print(index_map)
+            
+            # 上記のindexマップを利用してquboのkeyをindexで置き換え
+            qubo_index = {(index_map[key[0]], index_map[key[1]]): value for key, value in qubo.items()}
+            #print(qubo_index)
+        
+            # matrixサイズ
+            N = len(keys)
+            #print(N)
+        
+            # qmatrix初期化
+            qmatrix = np.zeros((N, N))
+            for (i, j), value in qubo_index.items():
+                qmatrix[i, j] = value
+            #print(qmatrix)
 
-            return qubo, offset
+            return [qmatrix, index_map], offset
 
         # pandas
         elif isinstance(self.expr, pd.core.frame.DataFrame):
@@ -145,11 +192,128 @@ class Compile:
                             col_name = self.expr.columns[j]
 
                         qubo[(row_name, col_name)] = c
+            
+            # 重複なしにシンボルを抽出
+            keys = list(set(key for keypair in qubo.keys() for key in keypair))
+            #print(keys)
+            
+            # 要素のソート（ただしアルファベットソート）
+            keys.sort()
+            #print(keys)
+            
+            # シンボルにindexを対応させる
+            index_map = {key:i for i, key in enumerate(keys)}
+            #print(index_map)
+            
+            # 上記のindexマップを利用してquboのkeyをindexで置き換え
+            qubo_index = {(index_map[key[0]], index_map[key[1]]): value for key, value in qubo.items()}
+            #print(qubo_index)
+        
+            # matrixサイズ
+            N = len(keys)
+            #print(N)
+        
+            # qmatrix初期化
+            qmatrix = np.zeros((N, N))
+            for (i, j), value in qubo_index.items():
+                qmatrix[i, j] = value
+            #print(qmatrix)
 
-            return qubo, offset
+            return [qmatrix, index_map], offset
+        
+        else:
+            raise TypeError("Input type must be symengine, numpy, or pandas.")
+
+
+
+    #hoboテンソル作成
+    def get_hobo(self):
+        """
+        get hobo data
+        Raises:
+            TypeError: Input type is symengine.
+        Returns:
+            [hobo, index_map], offset. hobo is numpy tensor.
+        """
+        #symengine型のサブクラス
+        if 'symengine.lib' in str(type(self.expr)):
+            #式を展開して同類項をまとめる
+            expr = symengine.expand(self.expr)
+            
+            #二乗項を一乗項に変換
+            expr = replace_function(expr, lambda e: isinstance(e, symengine.Pow) and e.exp == 2, lambda e, *args: e)
+            
+            #最高字数を調べながらオフセットを記録
+            #項に分解
+            members = str(expr).split(' ')
+            
+            #各項をチェック
+            offset = 0
+            ho = 0
+            for member in members:
+                #数字単体ならオフセット
+                try:
+                    offset += float(member) #エラーなければ数字
+                except:
+                    pass
+                #'*'で分解
+                texts = member.split('*')
+                #係数を取り除く
+                try:
+                    texts[0] = re.sub(r'[()]', '', texts[0]) #'(5/2)'みたいなのも来る
+                    float(Rational(texts[0])) #分数も対応 #エラーなければ係数あり
+                    texts = texts[1:]
+                except:
+                    pass
+                
+                #最高次数の計算
+                # ['-']
+                # ['q2']
+                # ['q3', 'q4', 'q1', 'q2']
+                if len(texts) > ho:
+                    ho = len(texts)
+            # print(ho)
+            
+            #もう一度同類項をまとめる
+            expr = symengine.expand(expr)
+    
+            #文字と係数の辞書
+            coeff_dict = expr.as_coefficients_dict()
+            # print(coeff_dict)
+            
+            #定数項を消す　{1: 25} 必ずある
+            del coeff_dict[1]
+            # print(coeff_dict)
+            
+            #シンボル対応表
+            # 重複なしにシンボルを抽出
+            keys = list(set(sum([str(key).split('*') for key in coeff_dict.keys()], [])))
+            # print(keys)
+            
+            # 要素のソート（ただしアルファベットソート）
+            keys.sort()
+            # print(keys)
+            
+            # シンボルにindexを対応させる
+            index_map = {key:i for i, key in enumerate(keys)}
+            # print(index_map)
+            
+            #量子ビット数
+            num = len(index_map)
+            # print(num)
+            
+            #HOBO行列生成
+            hobo = np.zeros(num ** ho, dtype=float).reshape([num] * ho)
+            for key, value in coeff_dict.items():
+                qnames = str(key).split('*')
+                indices = sorted([index_map[qname] for qname in qnames])
+                indices = [indices[0]] * (ho - len(indices)) + indices
+                hobo[tuple(indices)] = float(value)
+            
+            return [hobo, index_map], offset
 
         else:
-            raise TypeError("Input type is symengine, numpy or pandas.")
+            raise TypeError("Input type must be symengine.")
 
 class PieckCompile:
     def __init__(self, expr, verbose=1):
