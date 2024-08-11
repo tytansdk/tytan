@@ -3,6 +3,9 @@ import unittest
 import numpy as np
 from tytan import (Auto_array, Compile, sampler, symbols, symbols_define,
                    symbols_list, symbols_nbit)
+from tytan.compile import calc_degree
+import symengine
+import pytest
 
 
 def are_same_qubo_matrices(qubo1, qubo2):
@@ -2320,3 +2323,21 @@ class TestCompile(unittest.TestCase):
         }
         self.assertTrue(are_same_qubo_matrices(qubo, expected_qubo_matrix))
         self.assertEqual(offset, 1)
+
+
+# テストケースの定義
+@pytest.mark.parametrize("expr, expected", [
+    (symbols('x')**2 + 3*symbols('x') + 2, 2),  # 単純な多項式
+    (symengine.expand(5), 0),  # 定数項のみ
+    (symbols('x'), 1),  # 単一変数
+    (symbols('x')**2 + symbols('y')**2, 2),  # 複数変数の多項式
+    (symbols('x')**(symbols('x')**2), None),  # 非多項式（指数に変数を含む）
+    (symbols('x')**0.5, None),  # 非多項式（根号内に変数）
+    (3*symbols('x')**3 * 2*symbols('x')**2, 5),  # 乗算された項
+    (symbols('x')**3 + 2*symbols('x')**2 * symbols('x'), 3),  # 加算と乗算の混合
+    (2*symbols('x') * 3*symbols('y'), 2),  # 複数項の乗算（変数と定数）
+    (symbols('x')**-2, None),  # 負のべき乗
+])
+
+def test_calc_degree(expr, expected):
+    assert calc_degree(expr) == expected
