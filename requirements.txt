@@ -3,7 +3,7 @@ ulid-py
 numpy
 pandas
 sympy
-scipy>=1.9.0
+scipy
 symengine
 requests
 importlib
