@@ -62,7 +62,7 @@ class SASampler:
         nr.seed(self.seed)
         
         #
-        shots = max(int(shots), 100)
+        shots = max(int(shots), 1)
         
         # プール初期化
         pool_num = shots
@@ -198,7 +198,7 @@ class GASampler:
         nr.seed(self.seed)
         
         #
-        shots = max(int(shots), 100)
+        shots = max(int(shots), 2)
 
         # --- GA ---
         
@@ -740,7 +740,7 @@ class MIKASAmpler:
             torch.manual_seed(self.seed)
         
         #
-        shots = max(int(shots), 100)
+        shots = max(int(shots), 1)
         
         # --- テンソル疑似SA ---
         #
