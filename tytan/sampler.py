@@ -106,7 +106,7 @@ class SASampler:
         # print(score)
         
         # フリップ数リスト（2個まで下がる）
-        flip = np.sort(nr.rand(T_num) ** 2)[::-1]
+        flip = np.sort(nr.rand(T_num) ** 3)[::-1]
         flip = (flip * max(0, N * 0.5 - 2)).astype(int) + 2
         # print(flip)
         
@@ -784,7 +784,7 @@ class MIKASAmpler:
         # print(score)
         
         # フリップ数リスト（2個まで下がる）
-        flip = np.sort(nr.rand(T_num) ** 2)[::-1]
+        flip = np.sort(nr.rand(T_num) ** 3)[::-1]
         flip = (flip * max(0, N * 0.5 - 2)).astype(int) + 2
         #print(flip)
         
